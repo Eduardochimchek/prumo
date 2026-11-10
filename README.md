@@ -134,7 +134,7 @@ npm run dev          # http://localhost:5173 (também acessível pelo celular na
 | `npm run dev` | Servidor de desenvolvimento |
 | `npm run build` | Checa os tipos e gera `dist/` |
 | `npm run preview` | Serve o build de produção |
-| `npm test` | 35 testes unitários (CNPJ/CPF, boleto, chave e XML de NF-e, senhas e bloqueio, CSV, baixa e pagamento parcial, LGPD) |
+| `npm test` | 50 testes: unitários e de isolamento entre empresas no Postgres (PGlite) (CNPJ/CPF, boleto, chave e XML de NF-e, senhas e bloqueio, CSV, baixa e pagamento parcial, LGPD) |
 | `npm run smoke` | 18 passos ponta a ponta no navegador (bloqueio, privacidade, lançar, baixar, parcial, desfazer, XML, senha provisória, permissões, anonimização…) |
 | `npm run screenshots` | Capturas de todas as telas (desktop e celular) em `docs/screenshots` |
 | `npm run verificar` | Tudo acima que importa antes de um commit |
@@ -210,6 +210,9 @@ Sendo direto sobre o que esta versão é:
 - A V2 resolve esses pontos com servidor, banco de dados, autenticação de verdade (Argon2id, sessão segura) e dados compartilhados entre a equipe.
 
 ## Roadmap
+
+> **Mudança de rumo (novembro de 2026):** o Prumo vai virar assinatura (SaaS) de financeiro e faturamento para várias pequenas e médias empresas. O plano aprovado está em [Prumo SaaS: plano de arquitetura, custos e fases](https://claude.ai/artifact/3qEnzuxqQSrgs2kd5UJt4L). A Fase 1 (servidor multiempresa) começou: banco e testes de isolamento em [`supabase/`](supabase/README.md).
+
 
 **V1: protótipo funcional (esta versão)** ✓
 Painel, contas a pagar/receber, boleto, NF-e por XML, caixa SEFAZ simulada, fluxo de caixa, DRE, contatos com CNPJ, usuários e permissões, PWA, tema escuro.

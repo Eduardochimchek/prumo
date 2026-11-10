@@ -8,7 +8,7 @@ Sistema **financeiro-administrativo** (não contábil) para pequenas e médias e
 
 O usuário típico paga boletos, confere notas de fornecedores, cobra clientes, acompanha o caixa e repassa informação ao contador. **Não é um ERP de estoque nem um sistema contábil**: não fazemos lançamentos de partidas dobradas, SPED, folha de pagamento ou apuração de impostos.
 
-Estado atual: **V1 local-first** (dados no `localStorage` do navegador), publicada como demonstração no GitHub Pages. Próximo grande passo: V2 com backend e SEFAZ real (ver `docs/PRODUTO.md` e `docs/SEFAZ.md`).
+Estado atual: **V1 local-first** publicada; **Fase 1 do SaaS (multiempresa) em andamento na branch `fase-1`**. Antes: (dados no `localStorage` do navegador), publicada como demonstração no GitHub Pages. Próximo grande passo: V2 com backend e SEFAZ real (ver `docs/PRODUTO.md` e `docs/SEFAZ.md`).
 
 ## Comandos
 
@@ -55,6 +55,13 @@ npm run verificar    # typecheck + test + build + smoke (rode antes de cada comm
 - Nada de `innerHTML`, `dangerouslySetInnerHTML`, `eval`, script inline ou CDN externo (a CSP do build bloqueia). Domínio externo novo? Adicione no `connect-src` do `vite.config.ts` e no aviso de privacidade.
 - Exportações passam por `gerarCsv` (neutraliza fórmulas). Uploads respeitam os limites de `lib/util.ts`.
 - Mostre CPF de pessoa física com `documentoProtegido` nas listas.
+
+### Banco multiempresa (Fase 1 do SaaS; ver `supabase/README.md`)
+- O Prumo está virando SaaS para várias empresas. Plano aprovado: Supabase (Postgres + RLS) em São Paulo, Focus NFe, Asaas, Cloudflare Pages.
+- Toda tabela de negócio tem `empresa_id`, RLS ligado, políticas com `tem_acesso`/`tem_papel`, gatilhos `impede_troca_de_empresa` e `auditar`, e referências por `(id, empresa_id)`. A trava em `supabase/tests/isolamento.test.ts` falha se uma tabela ficar sem RLS ou aberta ao `anon`.
+- Migração nova = arquivo novo em `supabase/migrations/`; nunca editar migração já aplicada em produção.
+- A chave `service_role` nunca vai para o navegador. Emissão de nota, webhooks e certificados ficam em Edge Functions.
+- Os testes de banco rodam no PGlite com `npm test` (sem Docker).
 
 ### Design (“Papel & Tinta”; ver `docs/DESIGN.md`)
 - Use os **tokens** de `src/styles/tokens.css` (`--tinta`, `--folha`, `--entrada`, `--saida`, `--critico`…). Não escreva cores soltas nos componentes.

@@ -36,5 +36,5 @@ export default defineConfig({
   plugins: [react(), politicaDeSeguranca()],
   server: { port: 5173, host: true },
   build: { target: 'es2022', sourcemap: false, chunkSizeWarningLimit: 900 },
-  test: { environment: 'node', include: ['src/**/*.test.ts'] },
+  test: { environment: 'node', include: ['src/**/*.test.ts', 'supabase/**/*.test.ts'] },
 });
