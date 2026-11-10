@@ -34,7 +34,7 @@ Encontrou uma vulnerabilidade? **Não abra uma issue pública.** Use o botão �
 - Os dados ficam no navegador: quem tem acesso ao computador e às ferramentas do desenvolvedor consegue ler o `localStorage`. Por isso a V1 é para demonstração; a V2 leva os dados para um servidor.
 - GitHub Pages não permite cabeçalhos HTTP próprios: a CSP vai como `<meta>` e não há `frame-ancestors` nem HSTS configuráveis.
 
-## Para a V2 (servidor) — obrigatório antes de dados reais em produção
+## Para a V2 (servidor): obrigatório antes de dados reais em produção
 
 - Autenticação no servidor com Argon2id, sessão em cookie `httpOnly`/`Secure`/`SameSite`, proteção CSRF, MFA para administradores.
 - Isolamento por empresa em **toda** consulta (multi-tenant) e checagem de dono em cada recurso (evitar IDOR); política “negar por padrão”.
