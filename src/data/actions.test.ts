@@ -14,7 +14,7 @@ import {
   salvarUsuario,
   trocarPropriaSenha,
 } from './actions';
-import { saldoTotal, statusDe } from './selectors';
+import { saldoTotal, statusDe, vendasDoMes } from './selectors';
 import { hashSenha } from '../lib/sha256';
 
 const REF = '2026-11-09';
@@ -122,5 +122,83 @@ describe('LGPD', () => {
     const titulos = db.lancamentos.filter((l) => l.contatoId === joao.id);
     expect(titulos.reduce((a, l) => a + l.valor, 0)).toBe(totalAntes);
     expect(titulos.some((l) => l.descricao.includes('João Carlos'))).toBe(false);
+  });
+});
+
+describe('faturamento e cobrança (simulados)', () => {
+  it('orçamento → pedido → nota gera contas a receber parceladas sem perder centavo', async () => {
+    const { salvarOrcamento, aprovarOrcamento, emitirNotaDoPedido } = await import('./actions');
+    const { totaisDaVenda } = await import('./vendas');
+    const { analisarChave } = await import('../lib/nfe/chave');
+    const db = getDb();
+    const cliente = db.contatos.find((c) => c.nome === 'Construtora Laje Forte Ltda')!;
+    const cimento = db.produtos.find((p) => p.codigo === 'CX-CP2')!;
+    const o = salvarOrcamento(
+      {
+        contatoId: cliente.id,
+        itens: [{ produtoId: cimento.id, codigo: cimento.codigo, descricao: cimento.nome, unidade: cimento.unidade, quantidade: 101, precoUnitario: cimento.preco, total: 0 }],
+        desconto: 1_001,
+        frete: 0,
+        condicao: { forma: 'boleto', parcelas: 3, primeiroEm: 30, intervalo: 30 },
+        validade: '2026-11-20',
+      },
+      admin().id,
+    );
+    expect(o.etapa).toBe('orcamento');
+    const vmAntes = vendasDoMes(getDb());
+    expect(vmAntes.orcamentos.qtd).toBe(3);
+    aprovarOrcamento(o.id, admin().id);
+    expect(vendasDoMes(getDb()).pedidos.qtd).toBe(2);
+    const nota = emitirNotaDoPedido(o.id, admin().id);
+    expect(analisarChave(nota.chave).valida).toBe(true);
+    expect(nota.situacao).toBe('autorizada');
+    expect(nota.origem).toBe('emitida');
+    const total = totaisDaVenda(getDb().vendas.find((v) => v.id === o.id)!).total;
+    expect(nota.totais.nota).toBe(total);
+    const titulos = getDb().lancamentos.filter((l) => l.notaId === nota.id);
+    expect(titulos).toHaveLength(3);
+    expect(titulos.every((l) => l.tipo === 'receber' && l.forma === 'boleto')).toBe(true);
+    expect(titulos.reduce((a, l) => a + l.valor, 0)).toBe(total);
+    expect(getDb().vendas.find((v) => v.id === o.id)!.etapa).toBe('faturada');
+    const vmDepois = vendasDoMes(getDb());
+    expect(vmDepois.faturado).toBe(vmAntes.faturado + total);
+    expect(vmDepois.emitidas).toBe(vmAntes.emitidas + 1);
+    expect(vmDepois.pedidos.qtd).toBe(1);
+    expect(() => emitirNotaDoPedido(o.id, admin().id)).toThrow();
+  });
+
+  it('boleto e PIX válidos; simular pagamento dá a baixa e aumenta o saldo', async () => {
+    const { gerarCobranca, simularPagamento } = await import('./actions');
+    const { lerBoleto } = await import('../lib/boleto');
+    const { pixValido } = await import('../lib/pix');
+    const l = getDb().lancamentos.find((x) => x.tipo === 'receber' && !x.baixa && !x.cancelado && x.vencimento > REF)!;
+    const c = gerarCobranca(l.id, admin().id);
+    const info = lerBoleto(c.linhaDigitavel, REF);
+    expect(info?.valido).toBe(true);
+    expect(info?.valor).toBe(l.valor);
+    expect(pixValido(c.pixCopiaECola)).toBe(true);
+    expect(c.pixCopiaECola).toContain((l.valor / 100).toFixed(2));
+    const antes = saldoTotal(getDb());
+    simularPagamento(l.id, 'pix', admin().id);
+    const depois = getDb().lancamentos.find((x) => x.id === l.id)!;
+    expect(depois.baixa?.valorPago).toBe(l.valor);
+    expect(depois.cobranca?.pagaPor).toBe('pix');
+    expect(saldoTotal(getDb())).toBe(antes + l.valor);
+  });
+
+  it('a demonstração tem produtos e vendas coerentes com as notas', async () => {
+    const db = getDb();
+    expect(db.produtos.filter((p) => p.tipo === 'produto')).toHaveLength(20);
+    expect(db.produtos.filter((p) => p.tipo === 'servico')).toHaveLength(3);
+    const faturadas = db.vendas.filter((v) => v.etapa === 'faturada');
+    expect(faturadas.length).toBeGreaterThan(20);
+    for (const v of faturadas) {
+      const n = db.notas.find((x) => x.id === v.notaId)!;
+      expect(n.vendaId).toBe(v.id);
+      expect(n.totais.produtos).toBe(v.itens.reduce((a, i) => a + i.total, 0));
+      expect(v.itens.every((i) => db.produtos.some((p) => p.id === i.produtoId))).toBe(true);
+    }
+    expect(db.vendas.filter((v) => v.etapa === 'orcamento')).toHaveLength(2);
+    expect(db.vendas.filter((v) => v.etapa === 'pedido')).toHaveLength(1);
   });
 });

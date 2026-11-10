@@ -40,6 +40,8 @@ npm run verificar    # typecheck + test + build + smoke (rode antes de cada comm
 - **Status de título é derivado** (`statusDe()` em `selectors.ts`): pago, vencido, hoje, aberto, cancelado. Não grave status.
 - **Sentido da nota pelo CNPJ da empresa** (`direcaoDaNota`): destinatário = entrada/compra → contas a pagar; emitente = saída/venda → contas a receber.
 - Notas autorizadas geram títulos pelas **duplicatas** (`<cobr><dup>`); sem duplicata, um título à vista.
+- **Venda**: `orcamento` → `pedido` (aprovado) → `faturada` (nota emitida) ou `recusada`. Só `emitirNotaDoPedido` emite nota; ela gera as contas a receber pela condição de pagamento (a última parcela leva a diferença de centavos). Nota de venda emitida pelo Prumo tem `origem: 'emitida'` e `vendaId`, e não pode ser excluída.
+- **Simulação visível**: tudo o que é de mentira na demonstração (NF-e emitida, boleto/PIX, pagamento simulado, SEFAZ) mostra o selo `.selo-simulacao`. Integração real entra atrás de `ProvedorFiscal`/`ProvedorSefaz`, sem mudar as telas.
 - Toda escrita passa por `src/data/actions.ts` (valida regra, grava com `atualizar()`, registra `Atividade`). **Componentes não alteram o banco diretamente.**
 - Leituras derivadas ficam em `src/data/selectors.ts` (puras, sem efeitos). Derive com `useMemo` a partir de `useDb()`.
 - Permissões por papel em `src/auth/auth.tsx` (`pode('lancar' | 'baixar' | 'importar' | 'contatos' | 'usuarios' | 'config')`). Toda ação nova precisa de checagem na UI **e** a regra correspondente documentada.
@@ -93,7 +95,11 @@ npm run verificar    # typecheck + test + build + smoke (rode antes de cada comm
 | `src/components/TelasObrigatorias.tsx` | Troca de senha provisória e aviso de privacidade no 1º acesso |
 | `src/services/brasilapi.ts` | CNPJ e CEP públicos (CORS liberado) |
 | `src/services/sefaz.ts` | Interface `ProvedorSefaz` + implementação simulada |
-| `src/components/Acoes.tsx` | Central de diálogos globais (novo lançamento, baixa, detalhe, contato, importar, paleta) |
+| `src/services/fiscal.ts` | Interface `ProvedorFiscal` (emitir NF-e) + emissor simulado |
+| `src/data/vendas.ts` | Totais da venda, condições de pagamento e vencimentos das parcelas |
+| `src/lib/pix.ts` | PIX copia e cola (BR Code EMV + CRC16) |
+| `src/pages/Vendas.tsx`, `VendaDetalhe.tsx`, `Produtos.tsx` | Faturamento: orçamento → pedido → nota; cadastro de produtos e serviços |
+| `src/components/Acoes.tsx` | Central de diálogos globais (novo lançamento, baixa, detalhe, contato, importar, orçamento, cobrança, paleta) |
 | `src/layout/AppShell.tsx` | Cabeçalho desktop + navegação do celular |
 | `src/pages/*` | Telas (uma por rota) |
 | `src/styles/*` | tokens → base → components → shell → pages |

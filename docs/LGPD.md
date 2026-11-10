@@ -15,6 +15,7 @@ Este documento resume como o Prumo atende à Lei Geral de Proteção de Dados (L
 | Nome, e-mail, login, cargo, telefone, hash da senha | Usuários do sistema | Acesso e autoria das ações | Execução de contrato / legítimo interesse (art. 7º, V e IX) | Enquanto o usuário existir; apagados na exclusão |
 | Registro de atividades e de segurança | Usuários | Auditoria e segurança (art. 46) | Legítimo interesse | Junto com os registros financeiros; nome removido na exclusão do usuário |
 | Nome/razão social, CPF/CNPJ, e-mail, telefone, endereço | Clientes e fornecedores | Contas a pagar e a receber, notas | Execução de contrato / obrigação legal (art. 7º, II e V) | Enquanto houver relação + prazo fiscal; anonimizáveis a pedido |
+| Orçamentos, pedidos e cobranças (boleto/PIX) | Clientes | Vender, emitir a nota e cobrar | Execução de contrato (art. 7º, V) | Faturados: junto com a nota (prazo fiscal). Orçamentos recusados podem ser apagados; guardam só a referência ao cliente, então a anonimização do contato vale para eles |
 | Notas fiscais e títulos | Clientes e fornecedores | Obrigações fiscais e financeiras | Obrigação legal (art. 7º, II) | Em regra 5 anos (prescrição tributária, CTN arts. 173 e 174) |
 
 Dados sensíveis (art. 11): **nenhum**. O Prumo não pede saúde, religião, biometria etc. Não há dados de crianças.

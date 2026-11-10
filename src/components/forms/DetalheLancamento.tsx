@@ -22,6 +22,7 @@ export function DetalheLancamento({
   aoEditar,
   aoBaixar,
   aoDuplicar,
+  aoCobrar,
   recemPago,
 }: {
   id: string | null;
@@ -29,6 +30,7 @@ export function DetalheLancamento({
   aoEditar: (id: string) => void;
   aoBaixar: (ids: string[]) => void;
   aoDuplicar: (id: string) => void;
+  aoCobrar: (id: string) => void;
   recemPago?: boolean;
 }) {
   const db = useDb();
@@ -114,6 +116,11 @@ export function DetalheLancamento({
               Estornar baixa
             </Botao>
           )}
+          {!pagar && (l.cobranca || (pode('baixar') && !l.baixa && status !== 'cancelado')) && (
+            <Botao icone="codigoBarras" onClick={() => aoCobrar(l.id)}>
+              {l.cobranca ? 'Ver boleto/PIX' : 'Gerar boleto/PIX'}
+            </Botao>
+          )}
           {pode('baixar') && !l.baixa && status !== 'cancelado' && (
             <Botao variante="primario" icone="carimbo" onClick={() => aoBaixar([l.id])}>
               {pagar ? 'Registrar pagamento' : 'Registrar recebimento'}
@@ -181,6 +188,18 @@ export function DetalheLancamento({
           </>
         )}
       </dl>
+
+      {l.cobranca && (
+        <div className="aviso-caixa" style={{ marginTop: 18 }}>
+          <Icone nome="codigoBarras" />
+          <span>
+            {l.cobranca.pagaEm
+              ? `Pago por ${l.cobranca.pagaPor === 'pix' ? 'PIX' : 'boleto'}: a baixa foi feita sozinha.`
+              : 'Boleto com PIX gerado. Quando o cliente pagar, a baixa é feita sozinha.'}{' '}
+            <span className="selo-simulacao">simulação</span>
+          </span>
+        </div>
+      )}
 
       {l.linhaDigitavel && (
         <div className="detalhe__boleto">

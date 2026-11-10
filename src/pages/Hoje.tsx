@@ -3,10 +3,10 @@
 
 import { useMemo, useState, type ReactNode } from 'react';
 import { Link, useNavigate } from 'react-router';
-import { dataBR, dataExtenso, diaMesLongo, diffDias, fimMes, hoje, mesChave, mesLongo, relativoDias, saudacao, tempoRelativo } from '../lib/dates';
+import { addMesesChave, dataBR, dataExtenso, diaMesLongo, diffDias, fimMes, hoje, mesChave, mesLongo, relativoDias, saudacao, tempoRelativo } from '../lib/dates';
 import { extenso, moeda, plural } from '../lib/format';
 import { useDb } from '../data/store';
-import { agenda, briefing, fluxoMensal, indices, nomeContato, porCategoria, saldoConta, statusDe } from '../data/selectors';
+import { agenda, briefing, fluxoMensal, indices, nomeContato, porCategoria, saldoConta, statusDe, vendasDoMes } from '../data/selectors';
 import type { Lancamento } from '../data/types';
 import { useAuth, useUsuario } from '../auth/auth';
 import { useAcoes } from '../components/Acoes';
@@ -65,8 +65,18 @@ function LinhaTitulo({
   );
 }
 
-function PrimeirosPassos({ usuarioId, aoImportar, aoLancar, podeLancar }: { usuarioId: string; aoImportar: () => void; aoLancar: () => void; podeLancar: boolean }) {
-  const chave = `prumo:boasvindas:${usuarioId}`;
+function PrimeirosPassos({
+  usuarioId,
+  podeLancar,
+  aoOrcar,
+  pedidoId,
+}: {
+  usuarioId: string;
+  podeLancar: boolean;
+  aoOrcar: () => void;
+  pedidoId?: string;
+}) {
+  const chave = `prumo:boasvindas2:${usuarioId}`;
   const [visivel, setVisivel] = useState(() => {
     try {
       return localStorage.getItem(chave) !== 'ok';
@@ -87,8 +97,10 @@ function PrimeirosPassos({ usuarioId, aoImportar, aoLancar, podeLancar }: { usua
     <section className="boas-vindas surgir" aria-label="Primeiros passos">
       <div className="boas-vindas__cabeca">
         <div>
-          <p className="rotulo">Primeiros passos</p>
-          <h2>Quatro coisas para experimentar</h2>
+          <p className="rotulo">
+            Primeiros passos <span className="selo-simulacao">demonstração</span>
+          </p>
+          <h2>Da venda ao dinheiro no caixa, em quatro passos</h2>
         </div>
         <button type="button" className="btn btn--fantasma btn--p" onClick={fechar}>
           Já vi, esconder
@@ -96,30 +108,30 @@ function PrimeirosPassos({ usuarioId, aoImportar, aoLancar, podeLancar }: { usua
       </div>
       <ol className="boas-vindas__lista">
         <li>
-          <strong>Registre um pagamento</strong>
-          <span>Em “Próximos 14 dias”, clique em Pagar numa conta de hoje. Depois teste o Desfazer.</span>
-        </li>
-        <li>
-          <strong>Cole um boleto</strong>
-          <span>Em Lançar → Conta a pagar, cole a linha digitável: valor e vencimento se preenchem sozinhos.</span>
+          <strong>Faça um orçamento</strong>
+          <span>Escolha o cliente e os produtos, a condição de pagamento e salve. Quando ele aprovar, toque em “Cliente aprovou”: vira pedido.</span>
           {podeLancar && (
-            <button type="button" className="link" onClick={aoLancar}>
-              Abrir agora
+            <button type="button" className="link" onClick={aoOrcar}>
+              Novo orçamento
             </button>
           )}
         </li>
         <li>
-          <strong>Importe uma nota fiscal</strong>
-          <span>Baixe o XML de exemplo e importe: o fornecedor e as contas a pagar são criados pelas duplicatas.</span>
-          {podeLancar && (
-            <button type="button" className="link" onClick={aoImportar}>
-              Importar XML
-            </button>
+          <strong>Emita a nota</strong>
+          <span>No pedido aprovado, “Emitir nota fiscal”. A nota sai autorizada e as contas a receber são lançadas sozinhas, já parceladas.</span>
+          {pedidoId && (
+            <Link className="link" to={`/vendas/${pedidoId}`}>
+              Ver pedido aprovado
+            </Link>
           )}
         </li>
         <li>
-          <strong>Leve no celular</strong>
-          <span>Abra o mesmo endereço no celular e use “Adicionar à tela inicial”: o Prumo vira um aplicativo.</span>
+          <strong>Gere o boleto</strong>
+          <span>Abra uma parcela da venda e toque em “Gerar boleto/PIX”: sai o boleto com código de barras e o QR code do PIX.</span>
+        </li>
+        <li>
+          <strong>Simule o pagamento</strong>
+          <span>Toque em “Simular pagamento”. A baixa é feita sozinha e o saldo de hoje e o fluxo de caixa se atualizam.</span>
         </li>
       </ol>
     </section>
@@ -136,6 +148,7 @@ export function Hoje() {
   const [diaSel, setDiaSel] = useState(ref);
 
   const b = useMemo(() => briefing(db, ref), [db, ref]);
+  const vm = useMemo(() => vendasDoMes(db, ref), [db, ref]);
   const dias = useMemo(() => agenda(db, ref, 14), [db, ref]);
   const meses = useMemo(() => fluxoMensal(db, 5, 2, ref), [db, ref]);
   const categorias = useMemo(() => porCategoria(db, 'pagar', mesChave(ref)), [db, ref]);
@@ -200,6 +213,14 @@ export function Hoje() {
       Nos próximos 7 dias saem <Grifo tom="saida">{moeda(pagar.semana.total)}</Grifo> e entram <Grifo tom="entrada">{moeda(receber.semana.total)}</Grifo>.
     </>,
   );
+  if (vm.notas.length) {
+    frases.push(
+      <>
+        Em {mesLongo(mesChave(ref)).split(' de ')[0]}, as vendas somam <Grifo tom="entrada">{moeda(vm.faturado)}</Grifo> em {plural(vm.notas.length, 'nota', 'notas')}
+        {vm.pedidos.qtd ? <>, e {plural(vm.pedidos.qtd, 'pedido aprovado espera', 'pedidos aprovados esperam')} a nota</> : null}.
+      </>,
+    );
+  }
   const menor = b.projecao.menor;
   frases.push(
     <>
@@ -277,8 +298,8 @@ export function Hoje() {
         <PrimeirosPassos
           usuarioId={usuario.id}
           podeLancar={pode('lancar')}
-          aoImportar={() => acoes.importarNotas()}
-          aoLancar={() => acoes.novoLancamento({ tipo: 'pagar' })}
+          aoOrcar={() => acoes.novoOrcamento()}
+          pedidoId={vm.pedidos.lista[0]?.id}
         />
       )}
       <section className="hoje__abertura">
@@ -374,6 +395,74 @@ export function Hoje() {
               )}
             </ul>
           )}
+        </div>
+      </section>
+
+      <section className="hoje__vendas surgir-4" aria-label="Vendas do mês">
+        <div className="secao-titulo">
+          <h2>Vendas de {mesLongo(vm.mes).split(' de ')[0]}</h2>
+          <Link to="/vendas" className="link" style={{ fontSize: 14 }}>
+            Abrir vendas →
+          </Link>
+        </div>
+        <div className="hoje__vendas-corpo">
+          <dl className="placar">
+            <div className="placar__destaque">
+              <dt>Faturado no mês</dt>
+              <dd>{moeda(vm.faturado)}</dd>
+              <span className="placar__nota">
+                {vm.faturadoAnterior > 0
+                  ? `${mesLongo(addMesesChave(vm.mes, -1)).split(' de ')[0].replace(/^./, (c) => c.toUpperCase())} fechou em ${moeda(vm.faturadoAnterior)}`
+                  : 'primeiro mês com vendas'}
+              </span>
+            </div>
+            <div>
+              <dt>Notas emitidas</dt>
+              <dd className="num">{vm.notas.length}</dd>
+            </div>
+            <div className="placar__clicavel">
+              <dt>
+                <Link to="/vendas?aba=orcamento">Orçamentos em aberto</Link>
+              </dt>
+              <dd className="num">{vm.orcamentos.qtd}</dd>
+              <span className="placar__nota num">{moeda(vm.orcamentos.total)}</span>
+            </div>
+            <div className={`placar__clicavel${vm.pedidos.qtd ? ' placar--atencao' : ''}`}>
+              <dt>
+                <Link to="/vendas?aba=pedido">Pedidos sem nota</Link>
+              </dt>
+              <dd className="num">{vm.pedidos.qtd}</dd>
+              <span className="placar__nota num">{moeda(vm.pedidos.total)}</span>
+            </div>
+          </dl>
+          <div>
+            <p className="rotulo" style={{ marginBottom: 6 }}>
+              Últimas notas emitidas
+            </p>
+            {vm.notas.length ? (
+              <ul className="lista-titulos">
+                {vm.notas.slice(0, 4).map((n) => (
+                  <li key={n.id} className="titulo-linha">
+                    <button type="button" className="titulo-linha__principal" onClick={() => navegar(`/notas/${n.id}`)}>
+                      <span className="titulo-linha__sentido titulo-linha__sentido--receber">
+                        <Icone nome="nota" tam={15} />
+                      </span>
+                      <span className="titulo-linha__texto">
+                        <strong className="truncar">{n.destinatario.fantasia || n.destinatario.nome}</strong>
+                        <span className="truncar">
+                          NF {n.numero} · {dataBR(n.emissao.slice(0, 10))}
+                          {n.duplicatas.length > 1 ? ` · ${n.duplicatas.length} parcelas` : ''}
+                        </span>
+                      </span>
+                      <span className="titulo-linha__valor num">{moeda(n.totais.nota)}</span>
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <p className="muted">Nenhuma nota de venda neste mês ainda.</p>
+            )}
+          </div>
         </div>
       </section>
 

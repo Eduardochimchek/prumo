@@ -6,7 +6,7 @@ import { useSyncExternalStore } from 'react';
 import type { Database } from './types';
 import { criarBaseDemo } from './seed';
 
-export const VERSAO_BANCO = 1;
+export const VERSAO_BANCO = 2;
 const CHAVE = 'prumo:db:v1';
 
 type Ouvinte = () => void;
@@ -20,12 +20,24 @@ function carregar(): Database {
     if (bruto) {
       const db = JSON.parse(bruto) as Database;
       if (db && db.versao === VERSAO_BANCO && Array.isArray(db.lancamentos)) return db;
+      // v1 em uso de verdade: só ganha as listas novas. v1 de demonstração: recria (ganha produtos e vendas).
+      if (db && db.versao === 1 && !db.demo && Array.isArray(db.lancamentos)) {
+        const migrado = migrar(db);
+        persistir(migrado);
+        return migrado;
+      }
     }
   } catch {
     // localStorage indisponível (modo privado) ou JSON corrompido: recomeça com a demonstração
   }
   const db = criarBaseDemo();
   persistir(db);
+  return db;
+}
+
+/** Atualiza um banco de versão anterior para a atual sem perder dados. */
+export function migrar(db: Database): Database {
+  if (db.versao === 1) return { ...db, versao: 2, produtos: db.produtos ?? [], vendas: db.vendas ?? [] };
   return db;
 }
 
@@ -99,7 +111,7 @@ export function exportarBackup(): string {
 }
 
 export function validarBackup(json: string): Database {
-  const db = JSON.parse(json) as Database;
+  const db = migrar(JSON.parse(json) as Database);
   const ok =
     db &&
     typeof db === 'object' &&

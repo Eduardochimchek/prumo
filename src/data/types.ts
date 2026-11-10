@@ -123,6 +123,8 @@ export interface Lancamento {
   linhaDigitavel?: string;
   notaId?: ID;
   baixa?: Baixa;
+  /** boleto/PIX gerado para esta conta a receber (simulado na demonstração) */
+  cobranca?: Cobranca;
   cancelado?: boolean;
   observacoes?: string;
   criadoEm: ISODateTime;
@@ -171,7 +173,9 @@ export interface NotaFiscal {
   duplicatas: { numero: string; vencimento: ISODate; valor: Centavos }[];
   situacao: SituacaoNota;
   protocolo?: string;
-  origem: 'xml' | 'sefaz' | 'manual';
+  /** 'emitida' = nota de venda emitida pelo próprio Prumo (simulação na demonstração) */
+  origem: 'xml' | 'sefaz' | 'manual' | 'emitida';
+  vendaId?: ID;
   contatoId?: ID;
   importadaEm: ISODateTime;
   importadaPor: ID;
@@ -208,7 +212,9 @@ export type TipoAtividade =
   /** login, bloqueio, troca de senha: aparecem só no registro de segurança */
   | 'seguranca'
   /** exportação, anonimização e exclusão de dados pessoais (LGPD) */
-  | 'privacidade';
+  | 'privacidade'
+  | 'venda'
+  | 'cobranca';
 
 export interface Atividade {
   id: ID;
@@ -216,7 +222,7 @@ export interface Atividade {
   usuarioId: ID;
   tipo: TipoAtividade;
   texto: string;
-  ref?: { tipo: 'lancamento' | 'nota' | 'contato' | 'usuario'; id: ID };
+  ref?: { tipo: 'lancamento' | 'nota' | 'contato' | 'usuario' | 'venda'; id: ID };
 }
 
 export interface ConfigSefaz {
@@ -224,6 +230,78 @@ export interface ConfigSefaz {
   uf: string;
   certificado?: { titular: string; validade: ISODate };
   ultimaSincronizacao?: ISODateTime;
+}
+
+// ---------- Faturamento ----------
+
+export type TipoProduto = 'produto' | 'servico';
+
+export interface Produto {
+  id: ID;
+  tipo: TipoProduto;
+  codigo: string;
+  nome: string;
+  unidade: string;
+  preco: Centavos;
+  /** produto: NCM de 8 dígitos */
+  ncm?: string;
+  /** serviço: item da lista de serviços (LC 116), ex.: 14.01 */
+  codigoServico?: string;
+  ativo: boolean;
+  criadoEm: ISODateTime;
+}
+
+export interface ItemVenda {
+  produtoId: ID;
+  codigo: string;
+  descricao: string;
+  unidade: string;
+  quantidade: number;
+  precoUnitario: Centavos;
+  total: Centavos;
+}
+
+/** orçamento → pedido (aprovado) → faturada (nota emitida) */
+export type EtapaVenda = 'orcamento' | 'pedido' | 'faturada' | 'recusada';
+
+export interface CondicaoPagamento {
+  forma: 'pix' | 'boleto';
+  parcelas: number;
+  /** dias até o 1º vencimento (0 = à vista) */
+  primeiroEm: number;
+  /** dias entre parcelas */
+  intervalo: number;
+}
+
+export interface Venda {
+  id: ID;
+  numero: number;
+  etapa: EtapaVenda;
+  contatoId: ID;
+  itens: ItemVenda[];
+  desconto: Centavos;
+  frete: Centavos;
+  condicao: CondicaoPagamento;
+  validade: ISODate;
+  observacoes?: string;
+  criadoEm: ISODateTime;
+  criadoPor: ID;
+  aprovadoEm?: ISODateTime;
+  pedidoNumero?: number;
+  faturadoEm?: ISODateTime;
+  notaId?: ID;
+}
+
+export interface Cobranca {
+  /** boleto com QR code PIX ("bolix") */
+  linhaDigitavel: string;
+  codigoBarras: string;
+  pixCopiaECola: string;
+  nossoNumero: string;
+  geradaEm: ISODateTime;
+  pagaEm?: ISODateTime;
+  pagaPor?: 'pix' | 'boleto';
+  simulada: boolean;
 }
 
 export interface Database {
@@ -241,4 +319,6 @@ export interface Database {
   sefaz: ResumoSefaz[];
   atividades: Atividade[];
   configSefaz: ConfigSefaz;
+  produtos: Produto[];
+  vendas: Venda[];
 }

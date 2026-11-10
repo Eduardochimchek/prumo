@@ -4,6 +4,7 @@
 import { addDias, addMesesChave, fimMes, hoje, mesChave, type ISODate } from '../lib/dates';
 import { contem, moeda, normalizarBusca } from '../lib/format';
 import { formatarChave } from '../lib/nfe/chave';
+import { totaisDaVenda } from './vendas';
 import type {
   Categoria,
   ContaBancaria,
@@ -320,6 +321,30 @@ export function briefing(db: Database, ref: ISODate = hoje()) {
     .filter((l) => emAberto(l) && l.vencimento < ref)
     .sort((a, b) => (a.vencimento < b.vencimento ? -1 : 1));
   return { pagar, receber, saldo: projecao.inicial, projecao, saldoFimMes, notasSemTitulo, sefazPendentes, vencidos };
+}
+
+// ---------- Vendas do mês ----------
+
+/** Faturamento do mês (notas de saída autorizadas), comparação com o mês anterior e o que está no funil. */
+export function vendasDoMes(db: Database, ref: ISODate = hoje()) {
+  const mes = mesChave(ref);
+  const anterior = addMesesChave(mes, -1);
+  const saidas = db.notas.filter((n) => n.direcao === 'saida' && n.situacao === 'autorizada');
+  const doMes = saidas.filter((n) => n.emissao.slice(0, 7) === mes).sort((a, b) => (a.emissao < b.emissao ? 1 : -1));
+  const doAnterior = saidas.filter((n) => n.emissao.slice(0, 7) === anterior);
+  const soma = (ns: NotaFiscal[]) => ns.reduce((a, n) => a + n.totais.nota, 0);
+  const orcamentos = db.vendas.filter((v) => v.etapa === 'orcamento');
+  const pedidos = db.vendas.filter((v) => v.etapa === 'pedido');
+  const somaVendas = (vs: typeof orcamentos) => vs.reduce((a, v) => a + totaisDaVenda(v).total, 0);
+  return {
+    mes,
+    faturado: soma(doMes),
+    notas: doMes,
+    emitidas: doMes.filter((n) => n.origem === 'emitida').length,
+    faturadoAnterior: soma(doAnterior),
+    orcamentos: { qtd: orcamentos.length, total: somaVendas(orcamentos) },
+    pedidos: { qtd: pedidos.length, total: somaVendas(pedidos), lista: pedidos },
+  };
 }
 
 // ---------- Busca global (paleta de comandos) ----------

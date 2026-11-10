@@ -45,7 +45,15 @@ Idealizado por **Reginaldo Jeronimo**, profissional do financeiro administrativo
 - Saldo em caixa por conta bancária, com a projeção para o fim do mês.
 - Agenda dos próximos 14 dias (entradas sobem, saídas descem), lista do dia com baixa rápida.
 - “Para resolver”: contas vencidas, notas que ainda não viraram contas, notas aguardando manifestação na SEFAZ.
+- **Vendas do mês**: quanto foi faturado, notas emitidas, orçamentos em aberto, pedidos esperando nota e as últimas notas.
 - Atividade da equipe (quem fez o quê) e para onde vai o dinheiro do mês.
+
+**Faturamento (simulado na demonstração)**
+- **Produtos e serviços**: cadastro simples (nome, unidade, preço, NCM ou código do serviço). A demonstração traz 20 produtos de loja de materiais de construção e 3 serviços.
+- **Orçamento → pedido → nota**: monta o orçamento com itens, desconto, frete e condição de pagamento; o cliente aprova e vira pedido; um toque emite a NF-e (autorizada em simulação, com número, chave de acesso e DANFE).
+- A nota emitida **lança sozinha as contas a receber**, já parceladas (ex.: boleto 3x 30/60/90).
+- **Cobrança**: em cada conta a receber, “Gerar boleto/PIX” mostra o boleto com linha digitável e código de barras válidos e o QR code PIX (BR Code com CRC). “Simular pagamento” faz a baixa e atualiza o Hoje e o fluxo de caixa.
+- Tudo o que é de mentira leva um selo discreto “simulação”. A troca pelo emissor e pelo banco reais acontece atrás das interfaces `ProvedorFiscal` (`src/services/fiscal.ts`) e da cobrança, sem mudar as telas.
 
 **Contas a pagar e a receber**
 - Lançamento com **leitura do boleto**: cole a linha digitável e o Prumo preenche valor, vencimento e banco, conferindo os dígitos verificadores (inclui a regra do fator de vencimento que reiniciou em 22/02/2025).
@@ -88,6 +96,10 @@ Idealizado por **Reginaldo Jeronimo**, profissional do financeiro administrativo
 | Celular | Detalhe quitado | Tema escuro |
 |---|---|---|
 | ![Hoje no celular](docs/screenshots/hoje-celular-tela.png) | ![Título pago no celular](docs/screenshots/detalhe-pago-celular.png) | ![Tema escuro](docs/screenshots/hoje-escuro-celular-tela.png) |
+
+| Pedido aprovado, pronto para a nota | Boleto com PIX (simulação) |
+|---|---|
+| ![Pedido](docs/screenshots/venda-pedido-desktop.png) | ![Cobrança](docs/screenshots/cobranca-desktop.png) |
 
 | Contas a pagar | Nota fiscal (DANFE redesenhado) |
 |---|---|
@@ -212,7 +224,7 @@ Sendo direto sobre o que esta versão é:
 ## Roadmap
 
 **V1: protótipo funcional (esta versão)** ✓
-Painel, contas a pagar/receber, boleto, NF-e por XML, caixa SEFAZ simulada, fluxo de caixa, DRE, contatos com CNPJ, usuários e permissões, PWA, tema escuro.
+Painel, contas a pagar/receber, boleto, NF-e por XML, caixa SEFAZ simulada, fluxo de caixa, DRE, contatos com CNPJ, usuários e permissões, PWA, tema escuro. Faturamento de demonstração: produtos, orçamento → pedido → NF-e simulada → contas a receber → boleto/PIX simulado com baixa automática.
 
 **V2: uso real pela equipe**
 - Backend (API Node + PostgreSQL), autenticação segura, multiempresa e dados na nuvem.

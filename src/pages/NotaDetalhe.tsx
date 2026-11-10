@@ -49,6 +49,7 @@ export function NotaDetalhe() {
   const titulos = (idx.lancamentosPorNota.get(nota.id) ?? []).sort((a, b) => (a.vencimento < b.vencimento ? -1 : 1));
   const entrada = nota.direcao === 'entrada';
   const outro = entrada ? nota.emitente : nota.destinatario;
+  const venda = nota.vendaId ? db.vendas.find((v) => v.id === nota.vendaId) : undefined;
   const t = nota.totais;
   const impostos = t.icms + t.ipi + t.st + t.pis + t.cofins;
 
@@ -75,7 +76,15 @@ export function NotaDetalhe() {
           <h1>{outro.fantasia || outro.nome}</h1>
           <div className="linha-acoes" style={{ marginTop: 12 }}>
             <CarimboTexto variante={nota.situacao === 'autorizada' ? 'pago' : 'vencido'}>{nota.situacao === 'autorizada' ? 'Autorizada' : nota.situacao}</CarimboTexto>
-            <span className="etiqueta etiqueta--borda">{nota.origem === 'sefaz' ? 'Recebida da SEFAZ' : nota.origem === 'xml' ? 'Importada por XML' : 'Lançada à mão'}</span>
+            {nota.origem === 'emitida' && <span className="selo-simulacao">simulação</span>}
+            <span className="etiqueta etiqueta--borda">
+              {nota.origem === 'sefaz' ? 'Recebida da SEFAZ' : nota.origem === 'xml' ? 'Importada por XML' : nota.origem === 'emitida' ? 'Emitida pelo Prumo' : 'Lançada à mão'}
+            </span>
+            {venda && (
+              <Link to={`/vendas/${venda.id}`} className="link" style={{ fontSize: 13 }}>
+                Pedido nº {venda.numero}
+              </Link>
+            )}
             <span className="muted" style={{ fontSize: 13 }}>
               por {idx.usuarios.get(nota.importadaPor)?.nome ?? '-'} · {tempoRelativo(nota.importadaEm)}
             </span>
@@ -269,7 +278,7 @@ export function NotaDetalhe() {
         </section>
       </div>
 
-      {pode('config') && (
+      {pode('config') && !venda && (
         <div style={{ marginTop: 28 }}>
           <Botao
             variante="perigo"

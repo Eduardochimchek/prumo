@@ -28,7 +28,9 @@ Segmentos com mais aderência: comércio (varejo e atacado), distribuidoras, pre
 
 Ver a lista completa no [README](../README.md#o-que-a-v1-já-faz). Em resumo: painel do dia, contas a pagar/receber com boleto e parcelamento, NF-e por XML (e caixa SEFAZ simulada), fluxo de caixa projetado, DRE, cadastros com CNPJ da Receita, usuários com permissões, PWA e tema escuro.
 
-**Fora do escopo de propósito:** contabilidade (partidas dobradas, SPED), folha de pagamento, estoque, emissão de NF-e de venda, apuração de impostos. O Prumo conversa com quem faz isso (contador, ERP de estoque), não compete.
+**Demonstração de faturamento (nov/2026):** produtos e serviços, orçamento → pedido → NF-e simulada → contas a receber parceladas → boleto/PIX simulado com baixa automática. Serve para mostrar o fluxo completo e ouvir o dono antes da V2; a emissão real entra pela interface `ProvedorFiscal` (Fase 3 do plano SaaS).
+
+**Fora do escopo de propósito:** contabilidade (partidas dobradas, SPED), folha de pagamento, estoque, apuração de impostos. O Prumo conversa com quem faz isso (contador, ERP de estoque), não compete.
 
 ## Princípios
 

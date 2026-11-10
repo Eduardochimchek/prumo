@@ -7,12 +7,16 @@ import { addMeses } from '../lib/dates';
 import { useDb } from '../data/store';
 import type { Contato, TipoContato } from '../data/types';
 import { useAuth } from '../auth/auth';
+import { gerarCobranca } from '../data/actions';
+import { useAvisos } from './Avisos';
 import { LancamentoForm, type PresetLancamento } from './forms/LancamentoForm';
 import { BaixaForm } from './forms/BaixaForm';
 import { DetalheLancamento } from './forms/DetalheLancamento';
 import { ContatoForm } from './forms/ContatoForm';
 import { ImportarNotas } from './forms/ImportarNotas';
 import { PaletaComandos, type Comando } from './PaletaComandos';
+import { OrcamentoForm } from './forms/OrcamentoForm';
+import { CobrancaDialog } from './forms/CobrancaDialog';
 
 interface Api {
   novoLancamento: (preset: PresetLancamento) => void;
@@ -23,13 +27,18 @@ interface Api {
   editarContato: (id: string) => void;
   importarNotas: (aoConcluir?: (ids: string[]) => void) => void;
   abrirPaleta: () => void;
+  novoOrcamento: (clienteId?: string) => void;
+  editarOrcamento: (id: string) => void;
+  verCobranca: (lancamentoId: string) => void;
 }
 
 const Ctx = createContext<Api | null>(null);
 
 export function ProvedorAcoes({ children }: { children: ReactNode }) {
   const db = useDb();
-  const { pode } = useAuth();
+  const { pode, usuario: logado } = useAuth();
+  const { erro } = useAvisos();
+  const usuario = { id: logado?.id ?? '' };
   const [chave, setChave] = useState(0);
   const novaChave = () => setChave((c) => c + 1);
 
@@ -39,6 +48,8 @@ export function ProvedorAcoes({ children }: { children: ReactNode }) {
   const [contato, setContato] = useState<{ editandoId?: string; tipo: TipoContato; aoSalvar?: (c: Contato) => void } | null>(null);
   const [importar, setImportar] = useState<{ aoConcluir?: (ids: string[]) => void } | null>(null);
   const [paleta, setPaleta] = useState(false);
+  const [orcamento, setOrcamento] = useState<{ editandoId?: string; clienteId?: string } | null>(null);
+  const [cobranca, setCobranca] = useState<string | null>(null);
 
   const api = useMemo<Api>(
     () => ({
@@ -68,6 +79,15 @@ export function ProvedorAcoes({ children }: { children: ReactNode }) {
         setImportar({ aoConcluir });
       },
       abrirPaleta: () => setPaleta(true),
+      novoOrcamento: (clienteId) => {
+        novaChave();
+        setOrcamento({ clienteId });
+      },
+      editarOrcamento: (id) => {
+        novaChave();
+        setOrcamento({ editandoId: id });
+      },
+      verCobranca: (lancamentoId) => setCobranca(lancamentoId),
     }),
     [],
   );
@@ -80,6 +100,8 @@ export function ProvedorAcoes({ children }: { children: ReactNode }) {
     setBaixa(null);
     setContato(null);
     setImportar(null);
+    setOrcamento(null);
+    setCobranca(null);
   }, [pathname]);
 
   // Atalhos: Ctrl+K / ⌘K e "/" abrem a paleta
@@ -102,6 +124,7 @@ export function ProvedorAcoes({ children }: { children: ReactNode }) {
   const comandos: Comando[] = useMemo(() => {
     const c: Comando[] = [];
     if (pode('lancar')) {
+      c.push({ id: 'novo-orcamento', titulo: 'Novo orçamento', icone: 'nota', grupo: 'Ações', palavras: 'venda pedido cliente faturar nota', executar: () => api.novoOrcamento() });
       c.push({ id: 'novo-pagar', titulo: 'Nova conta a pagar', icone: 'pagar', grupo: 'Ações', palavras: 'lancar despesa boleto', executar: () => api.novoLancamento({ tipo: 'pagar' }) });
       c.push({ id: 'novo-receber', titulo: 'Nova conta a receber', icone: 'receber', grupo: 'Ações', palavras: 'lancar receita venda', executar: () => api.novoLancamento({ tipo: 'receber' }) });
     }
@@ -147,6 +170,14 @@ export function ProvedorAcoes({ children }: { children: ReactNode }) {
         aoEditar={(id) => api.editarLancamento(id)}
         aoBaixar={(ids) => api.darBaixa(ids, () => setDetalhe((d) => (d ? { ...d, recemPago: true } : d)))}
         aoDuplicar={duplicar}
+        aoCobrar={(id) => {
+          try {
+            gerarCobranca(id, usuario.id);
+            setCobranca(id);
+          } catch (e) {
+            erro(e);
+          }
+        }}
       />
 
       {baixa && titulosBaixa.length > 0 && (
@@ -171,6 +202,18 @@ export function ProvedorAcoes({ children }: { children: ReactNode }) {
       )}
 
       {importar && <ImportarNotas key={`i${chave}`} aberta aoFechar={() => setImportar(null)} aoConcluir={importar.aoConcluir} />}
+
+      {orcamento && (
+        <OrcamentoForm
+          key={`o${chave}`}
+          aoFechar={() => setOrcamento(null)}
+          editando={orcamento.editandoId ? db.vendas.find((v) => v.id === orcamento.editandoId) : undefined}
+          clienteInicial={orcamento.clienteId}
+          aoCriarContato={(aoSalvar) => api.novoContato('cliente', (c) => aoSalvar(c.id))}
+        />
+      )}
+
+      <CobrancaDialog lancamentoId={cobranca} aoFechar={() => setCobranca(null)} />
 
       <PaletaComandos aberta={paleta} aoFechar={() => setPaleta(false)} acoes={comandos} />
     </Ctx.Provider>

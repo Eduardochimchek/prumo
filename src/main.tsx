@@ -11,6 +11,7 @@ import './styles/base.css';
 import './styles/components.css';
 import './styles/shell.css';
 import './styles/pages.css';
+import './styles/vendas.css';
 import { App } from './App';
 import { aplicarTema, lerTema } from './lib/tema';
 

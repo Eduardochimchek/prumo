@@ -55,11 +55,13 @@ export function AppShell() {
 
   const itens: ItemNav[] = [
     { rota: '/', rotulo: 'Hoje', icone: 'hoje', fim: true },
+    { rota: '/vendas', rotulo: 'Vendas', icone: 'venda', contagem: db.vendas.filter((v) => v.etapa === 'pedido').length || undefined },
     { rota: '/contas/pagar', rotulo: 'A pagar', icone: 'pagar', contagem: b.pagar.vencido.qtd + b.pagar.hoje.qtd || undefined, alerta: b.pagar.vencido.qtd > 0 },
     { rota: '/contas/receber', rotulo: 'A receber', icone: 'receber', contagem: b.receber.vencido.qtd || undefined, alerta: b.receber.vencido.qtd > 0 },
     { rota: '/notas', rotulo: 'Notas fiscais', icone: 'nota', contagem: b.sefazPendentes.length + b.notasSemTitulo.length || undefined },
     { rota: '/fluxo', rotulo: 'Fluxo de caixa', icone: 'fluxo' },
     { rota: '/contatos', rotulo: 'Contatos', icone: 'contatos' },
+    { rota: '/produtos', rotulo: 'Produtos', icone: 'produto' },
     { rota: '/relatorios', rotulo: 'Relatórios', icone: 'relatorios' },
   ];
   const admin: ItemNav[] = [
@@ -118,6 +120,9 @@ export function AppShell() {
     <>
       {pode('lancar') && (
         <>
+          <ItemMenu icone="venda" onClick={() => { fechar(); acoes.novoOrcamento(); }}>
+            Orçamento
+          </ItemMenu>
           <ItemMenu icone="pagar" onClick={() => { fechar(); acoes.novoLancamento({ tipo: 'pagar' }); }}>
             Conta a pagar
           </ItemMenu>
@@ -220,10 +225,9 @@ export function AppShell() {
           <Icone nome="hoje" tam={22} />
           <span>Hoje</span>
         </NavLink>
-        <NavLink to="/contas/pagar" className={({ isActive }) => `nav-movel__item${isActive || local.pathname.startsWith('/contas') ? ' active' : ''}`}>
-          <Icone nome="pagar" tam={22} />
-          <span>Contas</span>
-          {b.pagar.vencido.qtd + b.receber.vencido.qtd > 0 && <i className="nav-movel__ponto" aria-label="há contas vencidas" />}
+        <NavLink to="/vendas" className="nav-movel__item">
+          <Icone nome="venda" tam={22} />
+          <span>Vendas</span>
         </NavLink>
         {pode('lancar') || pode('importar') ? (
           <button type="button" className="nav-movel__lancar" onClick={() => setLancar(true)} aria-label="Lançar">
@@ -235,9 +239,10 @@ export function AppShell() {
             <span>Fluxo</span>
           </NavLink>
         )}
-        <NavLink to="/notas" className="nav-movel__item">
-          <Icone nome="nota" tam={22} />
-          <span>Notas</span>
+        <NavLink to="/contas/pagar" className={({ isActive }) => `nav-movel__item${isActive || local.pathname.startsWith('/contas') ? ' active' : ''}`}>
+          <Icone nome="pagar" tam={22} />
+          <span>Contas</span>
+          {b.pagar.vencido.qtd + b.receber.vencido.qtd > 0 && <i className="nav-movel__ponto" aria-label="há contas vencidas" />}
         </NavLink>
         <button type="button" className={`nav-movel__item${mais ? ' active' : ''}`} onClick={() => setMais(true)}>
           <Icone nome="menu" tam={22} />
@@ -280,6 +285,7 @@ export function AppShell() {
         <div className="lancar-grade">
           {(
             [
+              ['venda', 'Orçamento', 'Vira pedido, nota e boleto', () => acoes.novoOrcamento(), pode('lancar')],
               ['pagar', 'Conta a pagar', 'Boleto, aluguel, fornecedor…', () => acoes.novoLancamento({ tipo: 'pagar' }), pode('lancar')],
               ['receber', 'Conta a receber', 'Venda, serviço, parcela…', () => acoes.novoLancamento({ tipo: 'receber' }), pode('lancar')],
               ['enviar', 'Importar nota (XML)', 'Gera as contas pelas duplicatas', () => acoes.importarNotas(), pode('importar')],

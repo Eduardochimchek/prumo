@@ -8,6 +8,9 @@ import { Hoje } from './pages/Hoje';
 import { Contas } from './pages/Contas';
 import { Notas } from './pages/Notas';
 import { NotaDetalhe } from './pages/NotaDetalhe';
+import { Vendas } from './pages/Vendas';
+import { VendaDetalhe } from './pages/VendaDetalhe';
+import { Produtos } from './pages/Produtos';
 import { Fluxo } from './pages/Fluxo';
 import { Contatos } from './pages/Contatos';
 import { Relatorios } from './pages/Relatorios';
@@ -47,6 +50,9 @@ function Rotas() {
         <Route element={<AppShell />}>
           <Route index element={<Hoje />} />
           <Route path="contas/:tipo" element={<Contas />} />
+          <Route path="vendas" element={<Vendas />} />
+          <Route path="vendas/:id" element={<VendaDetalhe />} />
+          <Route path="produtos" element={<Produtos />} />
           <Route path="notas" element={<Notas />} />
           <Route path="notas/:id" element={<NotaDetalhe />} />
           <Route path="fluxo" element={<Fluxo />} />

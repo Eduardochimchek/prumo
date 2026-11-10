@@ -1,0 +1,449 @@
+/* =====================================================================
+   Faturamento: vendas, orçamento, cobrança (boleto + PIX) e o placar
+   de vendas do "Hoje". Mesmas regras do resto: tokens, cor é informação.
+   ===================================================================== */
+
+/* ---------- Selo de simulação ----------
+   Discreto de propósito: marca o que é de mentira na demonstração sem gritar. */
+.selo-simulacao {
+  display: inline-block;
+  margin-left: 6px;
+  padding: 1px 6px 0;
+  border: 1px dashed color-mix(in oklab, var(--latao) 70%, transparent);
+  border-radius: var(--raio-p);
+  font-family: var(--fonte-mono);
+  font-size: 10px;
+  font-weight: 500;
+  line-height: 1.5;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--latao);
+  vertical-align: 0.15em;
+  white-space: nowrap;
+}
+
+/* ---------- Vendas ---------- */
+.funil-vendas {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  margin: 8px 0 0;
+  padding: 0;
+  list-style: none;
+  border: 1px solid var(--regua);
+  border-radius: var(--raio-g);
+  background: var(--folha);
+  overflow: hidden;
+}
+.funil-vendas li + li {
+  border-left: 1px solid var(--regua);
+}
+.funil-vendas button {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  min-width: 0;
+  padding: 14px 16px;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.funil-vendas button:hover {
+  background: var(--folha-2);
+}
+.funil-vendas li.ativo button {
+  background: var(--folha-2);
+  box-shadow: inset 0 -3px 0 var(--tinta);
+}
+.funil-vendas button > span:nth-child(2) {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  flex: 1;
+}
+.funil-vendas small {
+  color: var(--tinta-3);
+  font-size: 12.5px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.funil-vendas__passo {
+  font-family: var(--fonte-titulo);
+  font-size: 26px;
+  line-height: 1;
+  color: var(--latao);
+}
+.funil-vendas__n {
+  font-size: 22px;
+  font-weight: 640;
+}
+@media (max-width: 640px) {
+  .funil-vendas button {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 2px;
+    padding: 10px 12px;
+  }
+  .funil-vendas__passo,
+  .funil-vendas small {
+    display: none;
+  }
+  .funil-vendas__n {
+    font-size: 20px;
+  }
+}
+
+.trilha-venda {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 22px;
+  margin: 14px 0 20px;
+  padding: 0;
+  list-style: none;
+  font-size: 13.5px;
+  color: var(--tinta-3);
+}
+.trilha-venda li {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+.trilha-venda__marca {
+  display: inline-grid;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  border: 1px solid var(--regua-2);
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+}
+.trilha-venda li.atual {
+  color: var(--tinta);
+  font-weight: 600;
+}
+.trilha-venda li.atual .trilha-venda__marca {
+  border-color: var(--latao);
+  background: var(--latao);
+  color: var(--folha);
+}
+.trilha-venda li.feito {
+  color: var(--tinta-2);
+}
+.trilha-venda li.feito .trilha-venda__marca {
+  border-color: var(--entrada);
+  color: var(--entrada);
+}
+.venda__documento {
+  margin-top: 6px;
+}
+
+/* ---------- Orçamento (formulário) ---------- */
+.orcamento__itens {
+  display: flex;
+  flex-direction: column;
+  margin: 6px 0 0;
+  padding: 0;
+  list-style: none;
+  border-top: 1px solid var(--regua);
+}
+.orcamento__itens li {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 110px 120px 96px 32px;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--regua);
+}
+.orcamento__item-nome {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  font-size: 14px;
+}
+.orcamento__item-nome .mono {
+  font-size: 11.5px;
+  color: var(--tinta-3);
+}
+.orcamento__qtd {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+}
+.orcamento__qtd input {
+  min-width: 0;
+  text-align: right;
+}
+.orcamento__linha-total {
+  text-align: right;
+  font-size: 14px;
+}
+.orcamento__totais {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin: 4px 0 0 auto;
+  width: min(100%, 300px);
+  font-size: 14px;
+}
+.orcamento__totais > div {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  color: var(--tinta-2);
+}
+.orcamento__totais dd {
+  margin: 0;
+}
+.orcamento__totais > .orcamento__total {
+  margin-top: 4px;
+  padding-top: 8px;
+  border-top: 1px solid var(--tinta);
+  color: var(--tinta);
+}
+.orcamento__total dt {
+  font-weight: 600;
+}
+.orcamento__total dd {
+  font-size: 22px;
+  font-weight: 680;
+  letter-spacing: -0.01em;
+}
+.orcamento__total-rodape {
+  font-weight: 640;
+}
+@media (max-width: 640px) {
+  .orcamento__itens li {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) 32px;
+    grid-template-areas:
+      "nome nome tirar"
+      "qtd preco preco"
+      "total total total";
+    row-gap: 8px;
+  }
+  .orcamento__item-nome {
+    grid-area: nome;
+  }
+  .orcamento__qtd {
+    grid-area: qtd;
+  }
+  .orcamento__preco {
+    grid-area: preco;
+  }
+  .orcamento__linha-total {
+    grid-area: total;
+  }
+  .orcamento__itens li > .btn {
+    grid-area: tirar;
+  }
+  .orcamento__total-rodape {
+    display: none;
+  }
+}
+
+/* ---------- Cobrança (boleto + PIX) ---------- */
+.cobranca {
+  display: grid;
+  grid-template-columns: 220px minmax(0, 1fr);
+  gap: 18px;
+}
+.cobranca__pix {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  padding: 16px;
+  border: 1px solid var(--regua);
+  border-radius: var(--raio);
+  background: var(--folha);
+  text-align: center;
+}
+.qrcode {
+  display: block;
+  width: 168px;
+  height: 168px;
+  padding: 8px;
+  border-radius: var(--raio-p);
+  background: #fff; /* QR precisa de fundo branco para ser lido, inclusive no tema escuro */
+}
+.cobranca__boleto {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-width: 0;
+  padding: 16px;
+  border: 1px solid var(--tinta);
+  border-radius: var(--raio-p);
+  background: var(--folha);
+}
+.cobranca__linha-topo {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+  min-width: 0;
+  padding-bottom: 10px;
+  border-bottom: 1px solid var(--tinta);
+}
+.cobranca__linha-topo strong {
+  white-space: nowrap;
+  padding-right: 12px;
+  border-right: 1px solid var(--tinta);
+  font-size: 16px;
+}
+.cobranca__linha-topo code {
+  font-size: 13.5px;
+  letter-spacing: 0.02em;
+  overflow-wrap: anywhere;
+}
+.cobranca__campos {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px 16px;
+  margin: 0;
+}
+.cobranca__campos > div {
+  min-width: 0;
+}
+.cobranca__campos dt {
+  font-family: var(--fonte-mono);
+  font-size: 10px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--tinta-3);
+}
+.cobranca__campos dd {
+  margin: 2px 0 0;
+  font-size: 13.5px;
+  overflow-wrap: anywhere;
+}
+.codigo-barras {
+  display: block;
+  width: 100%;
+  max-width: 420px;
+  height: 52px;
+  padding: 6px 8px;
+  border-radius: var(--raio-p);
+  background: #fff; /* idem: barras pretas em fundo branco */
+}
+.cobranca__boleto > .btn {
+  align-self: flex-start;
+}
+@media (max-width: 720px) {
+  .cobranca,
+  .cobranca__campos {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+/* ---------- Hoje: vendas do mês ---------- */
+.hoje__vendas {
+  margin-top: 8px;
+}
+.hoje__vendas-corpo {
+  display: grid;
+  grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr);
+  gap: 28px;
+  align-items: start;
+}
+.placar {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  margin: 0;
+  border-top: 1px solid var(--tinta);
+}
+.placar > div {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+  padding: 14px 14px 14px 0;
+  border-bottom: 1px solid var(--regua);
+}
+.placar > div + div {
+  padding-left: 14px;
+  border-left: 1px solid var(--regua);
+}
+.placar > div:nth-child(2) {
+  padding-left: 0;
+  border-left: 0;
+}
+.placar > .placar__destaque {
+  grid-column: 1 / -1;
+  padding-left: 0;
+  border-left: 0;
+}
+.placar dt,
+.placar dt a {
+  font-family: var(--fonte-mono);
+  font-size: 10.5px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--tinta-3);
+  text-decoration: none;
+}
+.placar dd {
+  margin: 2px 0 0;
+  font-size: 24px;
+  font-weight: 640;
+}
+.placar__destaque dd {
+  font-family: var(--fonte-titulo);
+  font-size: clamp(34px, 5vw, 44px);
+  font-weight: 500;
+  letter-spacing: -0.02em;
+  color: var(--entrada);
+  font-variant-numeric: proportional-nums lining-nums;
+}
+.placar__nota {
+  font-size: 12.5px;
+  color: var(--tinta-3);
+}
+.placar__clicavel dt a::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+}
+.placar__clicavel:hover {
+  background: var(--folha-2);
+}
+.placar__clicavel dt a:focus-visible {
+  outline: none;
+}
+.placar__clicavel:has(a:focus-visible) {
+  outline: 2px solid var(--caneta);
+  outline-offset: -2px;
+}
+.placar--atencao dd {
+  color: var(--atencao);
+}
+@media (max-width: 900px) {
+  .hoje__vendas-corpo {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 20px;
+  }
+}
+@media (max-width: 520px) {
+  .placar {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .placar > div:nth-child(2) {
+    grid-column: 1 / -1;
+  }
+  .placar > div:nth-child(3) {
+    padding-left: 0;
+    border-left: 0;
+  }
+}
+
+@media print {
+  .trilha-venda,
+  .voltar {
+    display: none !important;
+  }
+}

@@ -34,6 +34,8 @@ import type {
   Lancamento,
   NotaFiscal,
   Papel,
+  Produto as ProdutoCadastro,
+  Venda,
   ResumoSefaz,
   TipoCategoria,
   Usuario,
@@ -287,6 +289,25 @@ export function criarBaseDemo(ref: ISODate = hoje()): Database {
   // Um contato que é cliente E fornecedor (comum no varejo de construção)
   const ambos = contato('ambos', 'Pedreira São Jorge Ltda', 'Pedreira São Jorge', 'Sapucaia do Sul', 'RS', 'pedreirasaojorge.com.br');
 
+  // ---------- Produtos e serviços (preço de venda = custo do catálogo + 42%) ----------
+  const produtos: ProdutoCadastro[] = [];
+  for (const grupo of Object.values(CATALOGO)) {
+    for (const [codigo, descricao, ncm, unidade, preco] of grupo) {
+      produtos.push({ id: id('prd'), tipo: 'produto', codigo, nome: descricao, unidade, preco: Math.round(preco * 1.42), ncm, ativo: true, criadoEm: momento(addDias(ref, -220), 10, 0) });
+    }
+  }
+  const servico = (codigo: string, nome: string, unidade: string, preco: number, codigoServico: string) => {
+    const p: ProdutoCadastro = { id: id('prd'), tipo: 'servico', codigo, nome, unidade, preco, codigoServico, ativo: true, criadoEm: momento(addDias(ref, -200), 10, 0) };
+    produtos.push(p);
+    return p;
+  };
+  const srvEntrega = servico('SRV-ENT', 'Entrega na obra (até 30 km)', 'SV', 9_000, '16.02');
+  const srvMontagem = servico('SRV-MON', 'Montagem e instalação de divisórias', 'H', 12_000, '7.02');
+  servico('SRV-COR', 'Corte de madeira sob medida', 'SV', 2_500, '14.05');
+  const produtoPorCodigo = new Map(produtos.map((p) => [p.codigo, p]));
+  const vendas: Venda[] = [];
+  let numeroVenda = 1040;
+
   // ---------- Lançamentos ----------
   const lancamentos: Lancamento[] = [];
   const notas: NotaFiscal[] = [];
@@ -536,6 +557,35 @@ export function criarBaseDemo(ref: ISODate = hoje()): Database {
         tributosCheios: false,
         contato: cliente,
       });
+      // a venda (orçamento → pedido → nota) que originou esta nota
+      nota.origem = 'emitida';
+      const venda: Venda = {
+        id: id('vnd'),
+        numero: ++numeroVenda,
+        etapa: 'faturada',
+        contatoId: cliente.id,
+        itens: itens.map((it) => ({
+          produtoId: produtoPorCodigo.get(it.codigo)?.id ?? '',
+          codigo: it.codigo,
+          descricao: it.descricao,
+          unidade: it.unidade ?? 'UN',
+          quantidade: it.quantidade,
+          precoUnitario: it.valorUnitario,
+          total: it.valorTotal,
+        })),
+        desconto: 0,
+        frete: 0,
+        condicao: { forma: 'boleto', parcelas: prazos.length, primeiroEm: prazos[0], intervalo: prazos.length > 1 ? prazos[1] - prazos[0] : 30 },
+        validade: addDias(emissao, 7),
+        criadoEm: momento(addDias(emissao, -3), 10, 15),
+        criadoPor: uAna.id,
+        aprovadoEm: momento(addDias(emissao, -1), 15, 40),
+        pedidoNumero: numeroVenda,
+        faturadoEm: momento(emissao, 11, 5),
+        notaId: nota.id,
+      };
+      nota.vendaId = venda.id;
+      vendas.push(venda);
       const grupo = id('grp');
       duplicatas.forEach((d, i) =>
         lanc({
@@ -635,6 +685,54 @@ export function criarBaseDemo(ref: ISODate = hoje()): Database {
     origem: 'sefaz',
   });
 
+  // ---------- Vendas em andamento: dois orçamentos e um pedido esperando a nota ----------
+  const itemDe = (codigo: string, quantidade: number) => {
+    const p = produtoPorCodigo.get(codigo)!;
+    return { produtoId: p.id, codigo: p.codigo, descricao: p.nome, unidade: p.unidade, quantidade, precoUnitario: p.preco, total: p.preco * quantidade };
+  };
+  vendas.push({
+    id: id('vnd'),
+    numero: ++numeroVenda,
+    etapa: 'orcamento',
+    contatoId: clientesPJ[0].id,
+    itens: [itemDe('CX-CP2', 200), itemDe('CX-ARG', 120), itemDe('CX-CAL', 60), itemDe(srvEntrega.codigo, 2)],
+    desconto: 25_000,
+    frete: 0,
+    condicao: { forma: 'boleto', parcelas: 3, primeiroEm: 30, intervalo: 30 },
+    validade: addDias(ref, 6),
+    observacoes: 'Entrega em duas viagens na obra da Rua Dona Laura.',
+    criadoEm: momento(addDias(ref, -1), 9, 20),
+    criadoPor: uAna.id,
+  });
+  vendas.push({
+    id: id('vnd'),
+    numero: ++numeroVenda,
+    etapa: 'orcamento',
+    contatoId: clientesPJ[4].id,
+    itens: [itemDe('TP-AC18', 14), itemDe('TP-SEL18', 6), itemDe('TP-MAS25', 10)],
+    desconto: 0,
+    frete: 0,
+    condicao: { forma: 'pix', parcelas: 1, primeiroEm: 0, intervalo: 30 },
+    validade: addDias(ref, 9),
+    criadoEm: momento(ref, 8, 45),
+    criadoPor: uReginaldo.id,
+  });
+  vendas.push({
+    id: id('vnd'),
+    numero: ++numeroVenda,
+    etapa: 'pedido',
+    contatoId: clientesPJ[5].id,
+    itens: [itemDe('EG-FIO25', 8), itemDe('EG-DJ32', 12), itemDe('EG-LED12', 6), itemDe(srvMontagem.codigo, 16)],
+    desconto: 0,
+    frete: 0,
+    condicao: { forma: 'boleto', parcelas: 2, primeiroEm: 28, intervalo: 28 },
+    validade: addDias(ref, 4),
+    criadoEm: momento(addDias(ref, -4), 14, 10),
+    criadoPor: uAna.id,
+    aprovadoEm: momento(addDias(ref, -1), 17, 2),
+    pedidoNumero: numeroVenda,
+  });
+
   // ---------- Caixa de entrada SEFAZ (simulada) ----------
   const resumo = (f: Contato, diasAtras: number, valor: number): ResumoSefaz => {
     const emissao = addDias(ref, -diasAtras);
@@ -690,7 +788,7 @@ export function criarBaseDemo(ref: ISODate = hoje()): Database {
   atividades.sort((a, b) => (b.em > a.em ? 1 : -1));
 
   return {
-    versao: 1,
+    versao: 2,
     criadoEm: new Date().toISOString(),
     demo: true,
     empresa,
@@ -703,5 +801,7 @@ export function criarBaseDemo(ref: ISODate = hoje()): Database {
     sefaz,
     atividades,
     configSefaz: { ambiente: 'homologacao', uf: 'RS' },
+    produtos,
+    vendas,
   };
 }

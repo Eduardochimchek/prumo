@@ -44,6 +44,8 @@ export function PaletaComandos({ aberta, aoFechar, acoes }: { aberta: boolean; a
       ['Hoje', '/', 'hoje', 'painel inicio resumo'],
       ['Contas a pagar', '/contas/pagar', 'pagar', 'despesas fornecedores boletos'],
       ['Contas a receber', '/contas/receber', 'receber', 'clientes vendas'],
+      ['Vendas', '/vendas', 'venda', 'orcamento pedido faturamento faturar'],
+      ['Produtos e serviços', '/produtos', 'produto', 'cadastro preco ncm servico'],
       ['Notas fiscais', '/notas', 'nota', 'nfe xml sefaz danfe'],
       ['Fluxo de caixa', '/fluxo', 'fluxo', 'projecao saldo'],
       ['Contatos', '/contatos', 'contatos', 'clientes fornecedores cadastro'],

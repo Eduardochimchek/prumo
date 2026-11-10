@@ -36,6 +36,8 @@ async function esperarServidor() {
 
 const telas = [
   { nome: 'hoje', rota: '#/' },
+  { nome: 'vendas', rota: '#/vendas' },
+  { nome: 'produtos', rota: '#/produtos' },
   { nome: 'contas-pagar', rota: '#/contas/pagar' },
   { nome: 'contas-receber', rota: '#/contas/receber?periodo=vencidos' },
   { nome: 'notas', rota: '#/notas' },
@@ -58,6 +60,9 @@ async function entrar(pagina) {
     await pagina.getByRole('button', { name: 'Entendi, vamos lá' }).click();
     await pagina.waitForSelector('.conteudo');
   }
+  // o cartão de primeiros passos ganha uma captura própria e some das demais
+  const cartao = pagina.locator('.boas-vindas');
+  if (await cartao.count()) await cartao.screenshot({ path: path.join(saida, `primeiros-passos-${pagina.viewportSize().width > 600 ? 'desktop' : 'celular'}.png`) });
   // esconde o cartão de primeiros passos nas capturas
   await pagina.evaluate(() => Object.keys(localStorage).length >= 0 && document.querySelectorAll('.boas-vindas .btn').forEach((b) => b.click()));
 }
@@ -123,6 +128,37 @@ try {
       await pagina.screenshot({ path: path.join(saida, `paleta-${modo}.png`) });
       await pagina.keyboard.press('Escape');
       console.log('ok', `dialogos-${modo}`);
+    }
+
+    if (quer(`faturamento-${modo}`)) {
+      // pedido aprovado, formulário de orçamento e boleto/PIX de uma venda faturada
+      await pagina.goto(URL_BASE + '#/vendas?aba=pedido');
+      await pagina.waitForTimeout(300);
+      await pagina.click('.razao tbody tr');
+      await pagina.waitForTimeout(400);
+      await pagina.screenshot({ path: path.join(saida, `venda-pedido-${modo}.png`), fullPage: true });
+      await pagina.goto(URL_BASE + '#/vendas');
+      await pagina.waitForTimeout(300);
+      await pagina.locator('.pagina-cabeca').getByRole('button', { name: 'Novo orçamento' }).click();
+      await pagina.selectOption('#o-cliente', { label: 'Laje Forte' });
+      for (const i of [1, 4, 21]) await pagina.locator('select[aria-label="Adicionar item"]').selectOption({ index: i });
+      await pagina.waitForTimeout(400);
+      await pagina.screenshot({ path: path.join(saida, `orcamento-form-${modo}.png`) });
+      await pagina.keyboard.press('Escape');
+      await pagina.goto(URL_BASE + '#/vendas?aba=faturada');
+      await pagina.waitForTimeout(300);
+      await pagina.click('.razao tbody tr');
+      await pagina.waitForTimeout(400);
+      await pagina.screenshot({ path: path.join(saida, `venda-faturada-${modo}.png`), fullPage: true });
+      const aberta = pagina.locator('.danfe .titulo-linha', { hasNotText: 'Recebido' }).first();
+      if (await aberta.count()) {
+        await aberta.locator('.titulo-linha__principal').click();
+        await pagina.waitForTimeout(300);
+        await pagina.getByRole('button', { name: /boleto\/PIX/ }).click();
+        await pagina.waitForTimeout(500);
+        await pagina.screenshot({ path: path.join(saida, `cobranca-${modo}.png`) });
+      }
+      console.log('ok', `faturamento-${modo}`);
     }
 
     if (quer(`escuro-${modo}`)) {

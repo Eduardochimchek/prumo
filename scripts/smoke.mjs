@@ -184,6 +184,56 @@ try {
     await aviso('importada com');
   });
 
+  let saldoAntes = '';
+  await passo('orçamento → pedido → nota fiscal (simulada) gera contas a receber', async () => {
+    await p.goto(BASE + '#/');
+    saldoAntes = (await p.locator('.hoje__saldo-valor').textContent()) ?? '';
+    await p.locator('.hoje__vendas').getByText('Faturado no mês').waitFor({ timeout: 3000 });
+    await p.goto(BASE + '#/vendas');
+    await p.locator('.pagina-cabeca').getByRole('button', { name: 'Novo orçamento' }).click();
+    await p.selectOption('#o-cliente', { label: 'Laje Forte' });
+    await p.locator('select[aria-label="Adicionar item"]').selectOption({ index: 1 });
+    await p.locator('select[aria-label="Adicionar item"]').selectOption({ index: 2 });
+    await p.selectOption('#o-cond', { label: 'Boleto 3x (30/60/90)' });
+    await p.getByRole('button', { name: 'Salvar orçamento' }).click();
+    await p.getByRole('heading', { name: /Orçamento nº/ }).waitFor({ timeout: 4000 });
+    await p.getByRole('button', { name: 'Cliente aprovou' }).click();
+    await aviso('Aprovado');
+    await p.getByRole('heading', { name: /Pedido nº/ }).waitFor({ timeout: 4000 });
+    await p.locator('.pagina-cabeca').getByRole('button', { name: 'Emitir nota fiscal' }).click();
+    await p.getByRole('button', { name: /Emitir NF-e de/ }).click();
+    await aviso('autorizada (simulação)');
+    await p.getByText('Contas a receber').first().waitFor({ timeout: 4000 });
+    const parcelas = await p.locator('.danfe .titulo-linha').count();
+    if (parcelas !== 3) throw new Error(`esperava 3 parcelas a receber, achei ${parcelas}`);
+  });
+
+  await passo('gerar boleto/PIX e simular pagamento dá a baixa sozinho', async () => {
+    await p.locator('.danfe .titulo-linha__principal').first().click();
+    await p.getByRole('button', { name: 'Gerar boleto/PIX' }).click();
+    await p.locator('.qrcode').waitFor({ timeout: 3000 });
+    await p.locator('.codigo-barras').waitFor({ timeout: 3000 });
+    await p.getByRole('button', { name: 'Simular pagamento por PIX' }).click();
+    await aviso('recebido por PIX');
+    await p.getByText(/Recebido em/).first().waitFor({ timeout: 3000 });
+    await p.keyboard.press('Escape');
+    await p.keyboard.press('Escape');
+    await p.goto(BASE + '#/');
+    const saldoDepois = (await p.locator('.hoje__saldo-valor').textContent()) ?? '';
+    if (saldoDepois === saldoAntes) throw new Error(`saldo de hoje não mudou (${saldoDepois})`);
+  });
+
+  await passo('cadastrar produto novo', async () => {
+    await p.goto(BASE + '#/produtos');
+    await p.getByRole('button', { name: 'Novo item' }).click();
+    await p.fill('#p-nome', 'Brita 1 (m³) fumaça');
+    await p.fill('#p-preco', '165,00');
+    await p.fill('#p-ncm', '25171000');
+    await p.getByRole('button', { name: 'Salvar' }).click();
+    await aviso('Produto cadastrado');
+    await p.getByText('Brita 1 (m³) fumaça').waitFor({ timeout: 3000 });
+  });
+
   await passo('busca rápida (Ctrl+K) encontra contato', async () => {
     await p.goto(BASE + '#/');
     await p.keyboard.press('Control+k');

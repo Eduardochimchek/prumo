@@ -2,12 +2,16 @@
 // negócio, grava via `atualizar()` e registra a atividade (trilha de auditoria).
 
 import { agoraISO, hoje, mesChave, type ISODate } from '../lib/dates';
-import { moeda } from '../lib/format';
+import { moeda, plural } from '../lib/format';
 import { normalizarCnpj, normalizarDocumento } from '../lib/br';
 import { gerarSal, hashSenha, iguais } from '../lib/sha256';
 import { avaliarSenha, ITERACOES_LEGADO, ITERACOES_SENHA } from '../lib/seguranca';
 import { uid } from '../lib/util';
 import type { NFeDados } from '../lib/nfe/parser';
+import { gerarLinhaDigitavel, lerBoleto } from '../lib/boleto';
+import { pixCopiaECola } from '../lib/pix';
+import { fiscal } from '../services/fiscal';
+import { totaisDaVenda } from './vendas';
 import { atualizar, getDb } from './store';
 import type {
   Atividade,
@@ -22,6 +26,9 @@ import type {
   NotaFiscal,
   TipoAtividade,
   Usuario,
+  Produto,
+  Venda,
+  Cobranca,
 } from './types';
 
 export class ErroNegocio extends Error {}
@@ -302,7 +309,12 @@ function contatoParaNota(db: Database, d: NFeDados, direcao: 'entrada' | 'saida'
   return { db: { ...db, contatos: [...db.contatos, novo] }, contato: novo, novo: true };
 }
 
-function titulosDaNota(nota: NotaFiscal, contato: Contato, opts: { categoriaId?: string; contaId?: string; vencimentoAVista?: ISODate }, usuarioId: string): Lancamento[] {
+function titulosDaNota(
+  nota: NotaFiscal,
+  contato: Contato,
+  opts: { categoriaId?: string; contaId?: string; vencimentoAVista?: ISODate; forma?: Lancamento['forma'] },
+  usuarioId: string,
+): Lancamento[] {
   const tipo = nota.direcao === 'entrada' ? 'pagar' : 'receber';
   const nomeOutro = contato.fantasia || contato.nome;
   const descricao = `${tipo === 'pagar' ? 'Mercadorias' : 'Venda'} · NF ${nota.numero} (${nomeOutro})`;
@@ -325,7 +337,7 @@ function titulosDaNota(nota: NotaFiscal, contato: Contato, opts: { categoriaId?:
     documento: `NF ${nota.numero} · ${i + 1}/${parcelas.length}`,
     parcela: parcelas.length > 1 ? { n: i + 1, de: parcelas.length } : undefined,
     grupoId: parcelas.length > 1 ? grupoId : undefined,
-    forma: 'boleto',
+    forma: opts.forma ?? 'boleto',
     notaId: nota.id,
     criadoEm: agoraISO(),
     criadoPor: usuarioId,
@@ -699,11 +711,182 @@ export function zerarDados(usuarioId: string): void {
         contatos: [],
         sefaz: [],
         atividades: [],
+        vendas: [],
+        produtos: [],
         contas: db.contas.map((c) => ({ ...c, saldoInicial: 0, saldoInicialEm: hoje() })),
       },
       usuarioId,
       'config',
       'zerou os dados de demonstração e começou do zero',
+    ),
+  );
+}
+
+
+// ---------- Faturamento: produtos, orçamento → pedido → nota ----------
+
+export type NovoProduto = Omit<Produto, 'id' | 'criadoEm'> & { id?: string };
+
+export function salvarProduto(p: NovoProduto, usuarioId: string): Produto {
+  if (!p.nome.trim()) throw new ErroNegocio('Informe o nome.');
+  if (!(p.preco > 0)) throw new ErroNegocio('Informe o preço de venda.');
+  if (!p.unidade.trim()) throw new ErroNegocio('Informe a unidade (UN, SC, M, H…).');
+  if (p.tipo === 'produto' && p.ncm && !/^\d{8}$/.test(p.ncm)) throw new ErroNegocio('O NCM tem 8 números.');
+  if (p.tipo === 'servico' && p.codigoServico && !/^\d{1,2}\.\d{2}$/.test(p.codigoServico)) throw new ErroNegocio('Código de serviço no formato 14.01.');
+  const db = getDb();
+  const codigo = p.codigo.trim().toUpperCase() || `P${String(db.produtos.length + 1).padStart(4, '0')}`;
+  if (db.produtos.some((x) => x.codigo === codigo && x.id !== p.id)) throw new ErroNegocio(`Já existe um item com o código ${codigo}.`);
+  const salvo: Produto = p.id
+    ? { ...(db.produtos.find((x) => x.id === p.id) as Produto), ...p, codigo, id: p.id }
+    : { ...p, codigo, id: uid('prd_'), criadoEm: agoraISO() };
+  atualizar((d) =>
+    comAtividade(
+      { ...d, produtos: p.id ? d.produtos.map((x) => (x.id === p.id ? salvo : x)) : [...d.produtos, salvo] },
+      usuarioId,
+      p.id ? 'edicao' : 'criacao',
+      `${p.id ? 'atualizou' : 'cadastrou'} o ${p.tipo === 'servico' ? 'serviço' : 'produto'} ${salvo.nome}`,
+    ),
+  );
+  return salvo;
+}
+
+export type NovaVenda = Pick<Venda, 'contatoId' | 'itens' | 'desconto' | 'frete' | 'condicao' | 'validade' | 'observacoes'> & { id?: string };
+
+function validarVenda(v: NovaVenda) {
+  if (!v.contatoId) throw new ErroNegocio('Escolha o cliente.');
+  if (v.itens.length === 0) throw new ErroNegocio('Inclua pelo menos um item.');
+  if (v.itens.some((i) => !(i.quantidade > 0) || !(i.precoUnitario > 0))) throw new ErroNegocio('Quantidade e preço precisam ser maiores que zero.');
+}
+
+export function salvarOrcamento(v: NovaVenda, usuarioId: string): Venda {
+  validarVenda(v);
+  const db = getDb();
+  const itens = v.itens.map((i) => ({ ...i, total: Math.round(i.quantidade * i.precoUnitario) }));
+  if (totaisDaVenda({ itens, desconto: v.desconto, frete: v.frete }).total <= 0) throw new ErroNegocio('O total precisa ser maior que zero.');
+  if (v.id) {
+    const atual = db.vendas.find((x) => x.id === v.id);
+    if (!atual) throw new ErroNegocio('Orçamento não encontrado.');
+    if (atual.etapa !== 'orcamento') throw new ErroNegocio('Só dá para editar enquanto é orçamento.');
+    const salvo: Venda = { ...atual, ...v, itens, id: atual.id };
+    atualizar((d) => comAtividade({ ...d, vendas: d.vendas.map((x) => (x.id === salvo.id ? salvo : x)) }, usuarioId, 'venda', `editou o orçamento nº ${salvo.numero}`, { tipo: 'venda', id: salvo.id }));
+    return salvo;
+  }
+  const numero = Math.max(1000, ...db.vendas.map((x) => x.numero)) + 1;
+  const nova: Venda = { ...v, itens, id: uid('vnd_'), numero, etapa: 'orcamento', criadoEm: agoraISO(), criadoPor: usuarioId };
+  atualizar((d) => comAtividade({ ...d, vendas: [...d.vendas, nova] }, usuarioId, 'venda', `fez o orçamento nº ${numero} (${moeda(totaisDaVenda(nova).total)})`, { tipo: 'venda', id: nova.id }));
+  return nova;
+}
+
+/** Cliente aprovou: o orçamento vira pedido (mesmo número). */
+export function aprovarOrcamento(id: string, usuarioId: string): void {
+  atualizar((db) => {
+    const v = db.vendas.find((x) => x.id === id);
+    if (!v || v.etapa !== 'orcamento') throw new ErroNegocio('Este orçamento não pode mais ser aprovado.');
+    return comAtividade(
+      { ...db, vendas: db.vendas.map((x) => (x.id === id ? { ...x, etapa: 'pedido' as const, aprovadoEm: agoraISO(), pedidoNumero: x.numero } : x)) },
+      usuarioId,
+      'venda',
+      `aprovou o orçamento nº ${v.numero}, que virou pedido`,
+      { tipo: 'venda', id },
+    );
+  });
+}
+
+export function recusarOrcamento(id: string, usuarioId: string): void {
+  atualizar((db) => {
+    const v = db.vendas.find((x) => x.id === id);
+    if (!v || v.etapa !== 'orcamento') throw new ErroNegocio('Só orçamentos podem ser recusados.');
+    return comAtividade({ ...db, vendas: db.vendas.map((x) => (x.id === id ? { ...x, etapa: 'recusada' as const } : x)) }, usuarioId, 'venda', `marcou o orçamento nº ${v.numero} como recusado`, { tipo: 'venda', id });
+  });
+}
+
+/** Emite a NF-e do pedido (simulada na demonstração) e gera as contas a receber pelas parcelas. */
+export function emitirNotaDoPedido(id: string, usuarioId: string): NotaFiscal {
+  const db = getDb();
+  const v = db.vendas.find((x) => x.id === id);
+  if (!v || v.etapa !== 'pedido') throw new ErroNegocio('Só um pedido aprovado pode virar nota.');
+  const contato = db.contatos.find((c) => c.id === v.contatoId);
+  if (!contato) throw new ErroNegocio('Cliente não encontrado.');
+  if (!contato.documento) throw new ErroNegocio('O cliente precisa ter CPF ou CNPJ para receber nota fiscal.');
+  const nota = fiscal.emitirNFe(db, v, contato, usuarioId);
+  const categoria = db.categorias.find((c) => c.nome === 'Venda de mercadorias')?.id;
+  const titulos = titulosDaNota(nota, contato, { categoriaId: categoria, vencimentoAVista: nota.emissao.slice(0, 10), forma: v.condicao.forma }, usuarioId);
+  atualizar((d) =>
+    comAtividade(
+      {
+        ...d,
+        notas: [...d.notas, nota],
+        lancamentos: [...d.lancamentos, ...titulos],
+        vendas: d.vendas.map((x) => (x.id === id ? { ...x, etapa: 'faturada' as const, faturadoEm: agoraISO(), notaId: nota.id } : x)),
+      },
+      usuarioId,
+      'venda',
+      `emitiu a NF ${nota.numero} do pedido nº ${v.numero} e lançou ${plural(titulos.length, 'conta', 'contas')} a receber`,
+      { tipo: 'nota', id: nota.id },
+    ),
+  );
+  return nota;
+}
+
+// ---------- Cobrança (boleto com PIX) ----------
+
+function hashTexto(t: string): number {
+  let h = 0;
+  for (let i = 0; i < t.length; i++) h = (Math.imul(31, h) + t.charCodeAt(i)) | 0;
+  return h;
+}
+
+/** Gera boleto + PIX para uma conta a receber (simulado: nada sai do sistema). */
+export function gerarCobranca(lancamentoId: string, usuarioId: string): Cobranca {
+  const db = getDb();
+  const l = db.lancamentos.find((x) => x.id === lancamentoId);
+  if (!l || l.tipo !== 'receber') throw new ErroNegocio('Cobrança só para contas a receber.');
+  if (l.baixa || l.cancelado) throw new ErroNegocio('Esta conta já foi recebida ou cancelada.');
+  if (l.cobranca) return l.cobranca;
+  const nosso = String(Math.abs(hashTexto(l.id)) % 1e10).padStart(10, '0');
+  const vencimento = l.vencimento < hoje() ? hoje() : l.vencimento;
+  const linha = gerarLinhaDigitavel('999', vencimento, l.valor, `1${nosso}${'0'.repeat(14)}`);
+  const cobranca: Cobranca = {
+    linhaDigitavel: linha,
+    codigoBarras: lerBoleto(linha, hoje())?.codigoBarras ?? '',
+    pixCopiaECola: pixCopiaECola({
+      chave: 'demonstracao@prumo.app',
+      nome: db.empresa.nomeFantasia || db.empresa.razaoSocial,
+      cidade: db.empresa.municipio || 'BRASIL',
+      valor: l.valor,
+      txid: `PRUMO${nosso}`,
+    }),
+    nossoNumero: nosso,
+    geradaEm: agoraISO(),
+    simulada: true,
+  };
+  atualizar((d) =>
+    comAtividade(
+      { ...d, lancamentos: d.lancamentos.map((x) => (x.id === lancamentoId ? { ...x, cobranca } : x)) },
+      usuarioId,
+      'cobranca',
+      `gerou boleto/PIX de “${l.descricao}” (${moeda(l.valor)})`,
+      { tipo: 'lancamento', id: lancamentoId },
+    ),
+  );
+  return cobranca;
+}
+
+/** Simula o aviso do banco de que o cliente pagou: dá a baixa sozinha (como o webhook fará no SaaS). */
+export function simularPagamento(lancamentoId: string, como: 'pix' | 'boleto', usuarioId: string): void {
+  const db = getDb();
+  const l = db.lancamentos.find((x) => x.id === lancamentoId);
+  if (!l?.cobranca) throw new ErroNegocio('Gere a cobrança antes de simular o pagamento.');
+  const contaId = l.contaId ?? db.contas.find((c) => c.ativa)?.id;
+  if (!contaId) throw new ErroNegocio('Cadastre uma conta bancária.');
+  darBaixa([l.id], { data: hoje(), contaId, observacao: `Recebido por ${como === 'pix' ? 'PIX' : 'boleto'} (simulação de pagamento)` }, usuarioId);
+  atualizar((d) =>
+    comAtividade(
+      { ...d, lancamentos: d.lancamentos.map((x) => (x.id === l.id && x.cobranca ? { ...x, cobranca: { ...x.cobranca, pagaEm: agoraISO(), pagaPor: como } } : x)) },
+      usuarioId,
+      'cobranca',
+      `recebeu por ${como === 'pix' ? 'PIX' : 'boleto'} “${l.descricao}” (baixa automática, simulação)`,
+      { tipo: 'lancamento', id: l.id },
     ),
   );
 }
