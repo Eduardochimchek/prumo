@@ -1,0 +1,9 @@
+Copyright (c) 2026 Reginaldo Jeronimo. Todos os direitos reservados.
+
+Este repositório é público apenas para demonstração e avaliação do produto
+"Prumo". Nenhuma licença é concedida: é proibido copiar, modificar, distribuir,
+sublicenciar ou usar este código, no todo ou em parte, para fins comerciais ou
+não comerciais, sem autorização prévia e por escrito do titular.
+
+As bibliotecas de terceiros usadas pelo projeto mantêm as suas próprias
+licenças (veja package.json e node_modules).

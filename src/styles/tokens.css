@@ -1,0 +1,131 @@
+/* =====================================================================
+   PRUMO — tokens do design system "Papel & Tinta"
+   Cor é informação, não decoração: a marca é tinta sobre papel; as cores
+   só aparecem quando significam algo (entrada, saída, status, hoje).
+   Pares de dados validados para daltonismo (protan/deutan) no claro e no escuro.
+   ===================================================================== */
+
+:root {
+  color-scheme: light;
+
+  /* superfícies */
+  --papel: #f3f0e9;          /* plano da página */
+  --folha: #fbfaf6;          /* painéis, tabelas, gráficos */
+  --folha-2: #f6f3ec;        /* hover, linhas alternadas */
+  --folha-3: #ede9df;        /* trilhos, áreas recuadas */
+
+  /* tinta (texto) */
+  --tinta: #17150f;
+  --tinta-2: #4a463d;
+  --tinta-3: #6c665a;        /* texto auxiliar (>= 4.5:1 na folha) */
+  --tinta-4: #a39c8e;        /* placeholder, desabilitado (decorativo) */
+
+  /* linhas */
+  --regua: #e3ded3;          /* hairline padrão */
+  --regua-2: #cfc8ba;        /* bordas de campos */
+  --grade: #ebe7de;          /* grade dos gráficos */
+  --eixo: #c9c2b4;
+
+  /* dados: polaridade (validado: CVD ΔE 8.4 protan) */
+  --entrada: #0b7550;
+  --saida: #de6b2c;
+  --entrada-suave: color-mix(in oklab, var(--entrada) 34%, var(--folha));
+  --saida-suave: color-mix(in oklab, var(--saida) 34%, var(--folha));
+
+  /* status (sempre com rótulo — nunca só a cor) */
+  --ok: #146c43;
+  --ok-fundo: #e3efe6;
+  --critico: #b42318;
+  --critico-fundo: #f8e6e1;
+  --atencao: #8a5a00;
+  --atencao-fundo: #f5ead0;
+  --neutro: #6c665a;
+
+  /* acentos */
+  --latao: #a87628;          /* marca (o prumo) e o marcador de "hoje" */
+  --caneta: #2546b5;         /* links e foco — azul de caneta esferográfica */
+  --foco: color-mix(in oklab, var(--caneta) 30%, transparent);
+
+  --sombra-camada: 0 28px 70px -20px rgb(23 21 15 / 0.32), 0 2px 8px rgb(23 21 15 / 0.08);
+  --sombra-leve: 0 1px 0 rgb(23 21 15 / 0.04), 0 1px 3px rgb(23 21 15 / 0.06);
+  --veu: rgb(23 21 15 / 0.42);
+
+  /* tipografia */
+  --fonte-titulo: 'Newsreader Variable', 'Iowan Old Style', 'Palatino Linotype', Georgia, serif;
+  --fonte-ui: 'Schibsted Grotesk Variable', 'Helvetica Neue', Arial, sans-serif;
+  --fonte-mono: 'IBM Plex Mono', ui-monospace, 'Cascadia Mono', Menlo, monospace;
+
+  --raio: 6px;
+  --raio-p: 4px;
+  --raio-g: 12px;
+
+  --largura-max: 1320px;
+  --lateral: clamp(16px, 4vw, 40px);
+  --altura-barra: 56px;
+  --altura-secoes: 44px;
+  --altura-nav-movel: 64px;
+
+  --ease: cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) {
+    color-scheme: dark;
+    --papel: #11100d;
+    --folha: #1a1915;
+    --folha-2: #211f1a;
+    --folha-3: #29261f;
+    --tinta: #f1ede4;
+    --tinta-2: #c9c2b3;
+    --tinta-3: #9d9688;
+    --tinta-4: #6a645a;
+    --regua: #2c2924;
+    --regua-2: #3d3931;
+    --grade: #27241f;
+    --eixo: #4a463d;
+    --entrada: #22966b;
+    --saida: #d06a2e;
+    --ok: #5cc38f;
+    --ok-fundo: #15281e;
+    --critico: #ff8a78;
+    --critico-fundo: #2f1a16;
+    --atencao: #e7b651;
+    --atencao-fundo: #2b2214;
+    --neutro: #9d9688;
+    --latao: #d6a650;
+    --caneta: #91a9ff;
+    --sombra-camada: 0 28px 70px -20px rgb(0 0 0 / 0.7), 0 2px 8px rgb(0 0 0 / 0.4);
+    --sombra-leve: 0 1px 0 rgb(0 0 0 / 0.3);
+    --veu: rgb(0 0 0 / 0.6);
+  }
+}
+
+:root[data-theme='dark'] {
+  color-scheme: dark;
+  --papel: #11100d;
+  --folha: #1a1915;
+  --folha-2: #211f1a;
+  --folha-3: #29261f;
+  --tinta: #f1ede4;
+  --tinta-2: #c9c2b3;
+  --tinta-3: #9d9688;
+  --tinta-4: #6a645a;
+  --regua: #2c2924;
+  --regua-2: #3d3931;
+  --grade: #27241f;
+  --eixo: #4a463d;
+  --entrada: #22966b;
+  --saida: #d06a2e;
+  --ok: #5cc38f;
+  --ok-fundo: #15281e;
+  --critico: #ff8a78;
+  --critico-fundo: #2f1a16;
+  --atencao: #e7b651;
+  --atencao-fundo: #2b2214;
+  --neutro: #9d9688;
+  --latao: #d6a650;
+  --caneta: #91a9ff;
+  --sombra-camada: 0 28px 70px -20px rgb(0 0 0 / 0.7), 0 2px 8px rgb(0 0 0 / 0.4);
+  --sombra-leve: 0 1px 0 rgb(0 0 0 / 0.3);
+  --veu: rgb(0 0 0 / 0.6);
+}

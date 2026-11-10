@@ -1,0 +1,26 @@
+node_modules/
+dist/
+*.local
+.env
+.env.*
+!.env.example
+.DS_Store
+Thumbs.db
+coverage/
+.vite/
+*.log
+.vscode/*
+!.vscode/extensions.json
+
+# capturas: só as usadas no README vão para o git (gere todas com npm run screenshots)
+docs/screenshots/*
+!docs/screenshots/hoje-desktop-tela.png
+!docs/screenshots/hoje-celular-tela.png
+!docs/screenshots/detalhe-pago-celular.png
+!docs/screenshots/hoje-escuro-celular-tela.png
+!docs/screenshots/contas-pagar-desktop-tela.png
+!docs/screenshots/nota-detalhe-desktop-tela.png
+!docs/screenshots/fluxo-desktop-tela.png
+!docs/screenshots/notas-sefaz-desktop-tela.png
+!docs/screenshots/usuarios-desktop-tela.png
+!docs/screenshots/login-desktop.png

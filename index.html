@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <title>Prumo · Gestão financeira</title>
+    <meta name="description" content="Prumo — contas a pagar e a receber, notas fiscais (XML e SEFAZ), fluxo de caixa e equipe, do computador ao celular." />
+    <meta name="theme-color" content="#f3f0e9" />
+    <meta name="color-scheme" content="light dark" />
+    <link rel="icon" type="image/svg+xml" href="./icons/prumo.svg" />
+    <link rel="apple-touch-icon" href="./icons/apple-touch-icon.png" />
+    <link rel="manifest" href="./manifest.webmanifest" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+    <meta name="apple-mobile-web-app-title" content="Prumo" />
+    <script>
+      // aplica o tema salvo antes da primeira pintura (evita piscar claro→escuro)
+      try {
+        var t = localStorage.getItem('prumo:tema');
+        if (t === 'escuro') document.documentElement.setAttribute('data-theme', 'dark');
+        if (t === 'claro') document.documentElement.setAttribute('data-theme', 'light');
+      } catch (e) {}
+    </script>
+  </head>
+  <body>
+    <div id="root"></div>
+    <noscript>O Prumo precisa de JavaScript para funcionar.</noscript>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>
