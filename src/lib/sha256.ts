@@ -65,12 +65,13 @@ export function sha256(mensagem: string): string {
   return Array.from(h, (x) => x.toString(16).padStart(8, '0')).join('');
 }
 
-const ITERACOES = 1500;
-
-/** Hash de senha com sal e iterações (estiramento simples). */
-export function hashSenha(senha: string, sal: string): string {
+/**
+ * Hash de senha com sal e iterações (estiramento de chave). Cada usuário guarda o número de
+ * iterações usado; senhas antigas (1.500) são refeitas com o padrão atual no próximo login.
+ */
+export function hashSenha(senha: string, sal: string, iteracoes: number): string {
   let atual = `${sal}:${senha}`;
-  for (let i = 0; i < ITERACOES; i++) atual = sha256(atual + sal);
+  for (let i = 0; i < iteracoes; i++) atual = sha256(atual + sal);
   return atual;
 }
 

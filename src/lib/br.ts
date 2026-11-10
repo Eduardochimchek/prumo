@@ -83,6 +83,13 @@ export function mascaraDocumento(entrada: string): string {
   return /[A-Z]/.test(n) || n.length > 11 ? mascaraCnpj(n) : mascaraCpf(n);
 }
 
+/** Minimização (LGPD): CPF de pessoa física aparece parcialmente nas listas: ***.982.247-** */
+export function documentoProtegido(entrada: string): string {
+  const n = normalizarDocumento(entrada);
+  if (n.length !== 11) return mascaraDocumento(n);
+  return `***.${n.slice(3, 6)}.${n.slice(6, 9)}-**`;
+}
+
 export function documentoValido(entrada: string): boolean {
   const n = normalizarDocumento(entrada);
   return n.length === 11 ? cpfValido(n) : cnpjValido(n);

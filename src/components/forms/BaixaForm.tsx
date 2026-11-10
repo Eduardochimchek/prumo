@@ -8,7 +8,7 @@ import { darBaixa, estornarBaixa } from '../../data/actions';
 import type { Lancamento } from '../../data/types';
 import { useUsuario } from '../../auth/auth';
 import { Camada } from '../Camada';
-import { AreaTexto, Botao, Campo, Entrada, EntradaMoeda, Selecao } from '../ui';
+import { AreaTexto, Botao, Caixa, Campo, Entrada, EntradaMoeda, Selecao } from '../ui';
 import { useAvisos } from '../Avisos';
 
 export function BaixaForm({ aberta, aoFechar, titulos, aoConcluir }: { aberta: boolean; aoFechar: () => void; titulos: Lancamento[]; aoConcluir?: (ids: string[]) => void }) {
@@ -24,17 +24,33 @@ export function BaixaForm({ aberta, aoFechar, titulos, aoConcluir }: { aberta: b
   const [juros, setJuros] = useState(0);
   const [desconto, setDesconto] = useState(0);
   const [obs, setObs] = useState('');
+  const [ehParcial, setEhParcial] = useState(false);
+  const [parcial, setParcial] = useState(0);
 
-  const valorPago = (individual?.valor ?? total) + juros - desconto;
+  const principal = individual && ehParcial ? parcial : individual?.valor ?? total;
+  const valorPago = principal + juros - desconto;
+  const parcialInvalido = ehParcial && individual ? !(parcial > 0 && parcial < individual.valor) : false;
   const verbo = tipo === 'pagar' ? 'Pagamento' : 'Recebimento';
 
   const confirmar = () => {
     try {
       const ids = titulos.map((t) => t.id);
-      darBaixa(ids, { data, contaId, juros, desconto, valorPago: individual ? valorPago : undefined, observacao: obs || undefined }, usuario.id);
-      avisar(individual ? `${verbo} registrado: ${moeda(valorPago)}.` : `${plural(ids.length, 'título baixado', 'títulos baixados')} · ${moeda(total)}.`, {
-        acao: { rotulo: 'Desfazer', executar: () => estornarBaixa(ids, usuario.id) },
-      });
+      darBaixa(
+        ids,
+        { data, contaId, juros, desconto, valorPago: individual ? valorPago : undefined, parcial: individual && ehParcial ? parcial : undefined, observacao: obs || undefined },
+        usuario.id,
+      );
+      const restante = individual && ehParcial ? individual.valor - parcial : 0;
+      avisar(
+        restante > 0
+          ? `${verbo} parcial registrado: ${moeda(valorPago)}. O saldo de ${moeda(restante)} ficou em aberto.`
+          : individual
+            ? `${verbo} registrado: ${moeda(valorPago)}.`
+            : `${plural(ids.length, 'título baixado', 'títulos baixados')} · ${moeda(total)}.`,
+        {
+          acao: restante > 0 ? undefined : { rotulo: 'Desfazer', executar: () => estornarBaixa(ids, usuario.id) },
+        },
+      );
       aoConcluir?.(ids);
       aoFechar();
     } catch (e) {
@@ -54,7 +70,7 @@ export function BaixaForm({ aberta, aoFechar, titulos, aoConcluir }: { aberta: b
           <Botao variante="fantasma" onClick={aoFechar}>
             Cancelar
           </Botao>
-          <Botao variante="primario" icone="carimbo" onClick={confirmar} disabled={valorPago <= 0}>
+          <Botao variante="primario" icone="carimbo" onClick={confirmar} disabled={valorPago <= 0 || parcialInvalido}>
             Confirmar {tipo === 'pagar' ? 'pagamento' : 'recebimento'}
           </Botao>
         </>
@@ -65,7 +81,7 @@ export function BaixaForm({ aberta, aoFechar, titulos, aoConcluir }: { aberta: b
           <span className="rotulo">{individual ? `Vencimento ${dataBR(individual.vencimento)}` : 'Total dos títulos'}</span>
           <strong>{moeda(individual?.valor ?? total)}</strong>
         </div>
-        {individual && (juros > 0 || desconto > 0) && (
+        {individual && (juros > 0 || desconto > 0 || ehParcial) && (
           <div style={{ textAlign: 'right' }}>
             <span className="rotulo">Valor {tipo === 'pagar' ? 'pago' : 'recebido'}</span>
             <strong>{moeda(valorPago)}</strong>
@@ -89,6 +105,26 @@ export function BaixaForm({ aberta, aoFechar, titulos, aoConcluir }: { aberta: b
         </Campo>
         {individual && (
           <>
+            <div>
+              <Caixa
+                rotulo={`Pagamento parcial (o restante continua em aberto)`}
+                checked={ehParcial}
+                onChange={(e) => {
+                  setEhParcial(e.target.checked);
+                  if (e.target.checked && !parcial) setParcial(Math.round(individual.valor / 2));
+                }}
+              />
+            </div>
+            {ehParcial && (
+              <Campo
+                rotulo={`Quanto do valor está sendo ${tipo === 'pagar' ? 'pago' : 'recebido'} agora`}
+                htmlFor="b-parcial"
+                erro={parcialInvalido ? `Informe um valor entre R$ 0,01 e ${moeda(individual.valor - 1)}.` : null}
+                dica={!parcialInvalido ? `Fica em aberto: ${moeda(individual.valor - parcial)}, com o mesmo vencimento.` : undefined}
+              >
+                <EntradaMoeda id="b-parcial" valor={parcial} aoMudar={setParcial} />
+              </Campo>
+            )}
             <Campo className="c3 m3" rotulo="Juros e multa" htmlFor="b-juros">
               <EntradaMoeda id="b-juros" valor={juros} aoMudar={setJuros} />
             </Campo>

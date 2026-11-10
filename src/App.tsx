@@ -1,4 +1,4 @@
-import { HashRouter, Link, Route, Routes } from 'react-router';
+import { HashRouter, Link, Route, Routes, useLocation } from 'react-router';
 import { ProvedorAuth, useAuth } from './auth/auth';
 import { ProvedorAvisos } from './components/Avisos';
 import { ProvedorAcoes } from './components/Acoes';
@@ -14,6 +14,9 @@ import { Relatorios } from './pages/Relatorios';
 import { Usuarios } from './pages/Usuarios';
 import { Configuracoes } from './pages/Configuracoes';
 import { Vazio } from './components/ui';
+import { Privacidade } from './pages/Privacidade';
+import { ErroLimite } from './components/ErroLimite';
+import { AvisoPrivacidade, TrocarSenhaObrigatoria } from './components/TelasObrigatorias';
 
 function NaoEncontrado() {
   return (
@@ -32,7 +35,12 @@ function NaoEncontrado() {
 
 function Rotas() {
   const { usuario } = useAuth();
+  const { pathname } = useLocation();
+  // aviso de privacidade é público (link na tela de entrada)
+  if (pathname === '/privacidade' && (!usuario || !usuario.aceitouPrivacidadeEm || usuario.trocarSenha)) return <Privacidade publica />;
   if (!usuario) return <Login />;
+  if (usuario.trocarSenha) return <TrocarSenhaObrigatoria />;
+  if (!usuario.aceitouPrivacidadeEm) return <AvisoPrivacidade />;
   return (
     <ProvedorAcoes>
       <Routes>
@@ -46,6 +54,7 @@ function Rotas() {
           <Route path="relatorios" element={<Relatorios />} />
           <Route path="usuarios" element={<Usuarios />} />
           <Route path="configuracoes" element={<Configuracoes />} />
+          <Route path="privacidade" element={<Privacidade />} />
           <Route path="*" element={<NaoEncontrado />} />
         </Route>
       </Routes>
@@ -59,7 +68,9 @@ export function App() {
     <HashRouter>
       <ProvedorAvisos>
         <ProvedorAuth>
-          <Rotas />
+          <ErroLimite>
+            <Rotas />
+          </ErroLimite>
         </ProvedorAuth>
       </ProvedorAvisos>
     </HashRouter>

@@ -57,6 +57,18 @@ export function restaurarDemonstracao(): void {
   substituirBanco(criarBaseDemo());
 }
 
+/** Remove do navegador TODOS os dados do Prumo (banco, sessão, tema, tentativas) e recarrega. */
+export function apagarDadosDoAparelho(): void {
+  try {
+    for (const k of Object.keys(localStorage)) if (k.startsWith('prumo:')) localStorage.removeItem(k);
+    for (const k of Object.keys(sessionStorage)) if (k.startsWith('prumo:')) sessionStorage.removeItem(k);
+  } catch {
+    /* ignora */
+  }
+  estado = null;
+  location.replace(location.pathname);
+}
+
 export const ultimoErroPersistencia = () => erroPersistencia;
 
 export function inscrever(o: Ouvinte): () => void {

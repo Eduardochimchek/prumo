@@ -50,7 +50,11 @@ try {
     await p.fill('#l-usuario', login);
     await p.fill('#l-senha', senha);
     await p.click('button[type=submit]');
-    await p.waitForSelector('.conteudo', { timeout: 5000 });
+    await p.waitForSelector('.conteudo, .tela-cheia', { timeout: 5000 });
+    if (await p.getByRole('button', { name: 'Entendi, vamos lá' }).count()) {
+      await p.getByRole('button', { name: 'Entendi, vamos lá' }).click();
+      await p.waitForSelector('.conteudo', { timeout: 5000 });
+    }
   };
   const sair = async () => {
     await p.click('.cabecalho .barra__usuario');
@@ -69,7 +73,30 @@ try {
     await p.getByText('Usuário ou senha incorretos.').waitFor({ timeout: 3000 });
   });
 
-  await passo('login do administrador', () => entrar('admin', 'admin123'));
+  await passo('5 tentativas erradas bloqueiam o login', async () => {
+    await p.goto(BASE);
+    for (let i = 0; i < 5; i++) {
+      await p.fill('#l-usuario', 'fulano');
+      await p.fill('#l-senha', `errada${i}`);
+      await p.click('button[type=submit]');
+      await p.waitForTimeout(120);
+    }
+    await p.getByText(/Acesso bloqueado por 1 min/).waitFor({ timeout: 3000 });
+  });
+
+  await passo('aviso de privacidade aparece no primeiro acesso', async () => {
+    await p.fill('#l-usuario', 'admin');
+    await p.fill('#l-senha', 'admin123');
+    await p.click('button[type=submit]');
+    await p.getByText('Antes de começar: seus dados').waitFor({ timeout: 4000 });
+    await p.getByRole('button', { name: 'Entendi, vamos lá' }).click();
+    await p.waitForSelector('.conteudo');
+  });
+
+  await passo('página de privacidade abre', async () => {
+    await p.goto(BASE + '#/privacidade');
+    await p.getByText('Como o Prumo cuida dos seus dados').waitFor({ timeout: 3000 });
+  });
 
   await passo('lançar conta a pagar parcelada em 3x', async () => {
     await p.getByRole('button', { name: 'Lançar' }).click();
@@ -102,6 +129,18 @@ try {
     await p.locator('.aviso button', { hasText: 'Desfazer' }).click();
     await p.getByRole('button', { name: 'Registrar pagamento' }).waitFor({ timeout: 3000 });
     await p.keyboard.press('Escape');
+  });
+
+  await passo('pagamento parcial deixa o saldo em aberto', async () => {
+    await p.locator('.livro__linha').first().click();
+    await p.getByRole('button', { name: 'Registrar pagamento' }).click();
+    await p.getByText('Pagamento parcial (o restante continua em aberto)').click();
+    await p.getByRole('button', { name: 'Confirmar pagamento' }).click();
+    await aviso('ficou em aberto');
+    await p.keyboard.press('Escape');
+    await p.waitForTimeout(250);
+    const linhas = await p.locator('.livro__linha').count();
+    if (linhas !== 3) throw new Error(`esperava 3 títulos em aberto (2 parcelas + saldo), achei ${linhas}`);
   });
 
   await passo('baixa em lote das 3 parcelas', async () => {
@@ -159,19 +198,44 @@ try {
     await p.fill('#u-nome', 'Teste Fumaça');
     await p.fill('#u-email', 'teste.fumaca@exemplo.com');
     await p.locator('.papel', { hasText: 'Consulta' }).click();
-    await p.fill('#u-senha', 'fumaca123');
+    await p.fill('#u-senha', 'Provisoria 2026');
     await p.getByRole('button', { name: 'Cadastrar usuário' }).click();
     await aviso('cadastrado');
     await p.getByText('teste.fumaca', { exact: true }).waitFor({ timeout: 3000 });
   });
 
-  await passo('usuário de consulta entra e não pode lançar', async () => {
+  await passo('usuário novo troca a senha provisória no 1º acesso', async () => {
     await sair();
-    await entrar('teste.fumaca', 'fumaca123');
+    await p.fill('#l-usuario', 'teste.fumaca');
+    await p.fill('#l-senha', 'Provisoria 2026');
+    await p.click('button[type=submit]');
+    await p.getByText('Crie a sua senha').waitFor({ timeout: 4000 });
+    await p.fill('#o-atual', 'Provisoria 2026');
+    await p.fill('#o-nova', 'Consulta ok 77');
+    await p.fill('#o-conf', 'Consulta ok 77');
+    await p.getByRole('button', { name: 'Salvar e entrar' }).click();
+    await p.getByRole('button', { name: 'Entendi, vamos lá' }).click();
+    await p.waitForSelector('.conteudo');
+    await sair();
+  });
+
+  await passo('usuário de consulta entra e não pode lançar', async () => {
+    await entrar('teste.fumaca', 'Consulta ok 77');
     if (await p.getByRole('button', { name: 'Lançar' }).count()) throw new Error('botão Lançar visível para Consulta');
     await p.goto(BASE + '#/usuarios');
     await p.waitForTimeout(300);
     if (!p.url().endsWith('#/')) throw new Error('Consulta conseguiu abrir Usuários');
+    await sair();
+  });
+
+  await passo('anonimizar cliente pessoa física (LGPD)', async () => {
+    await entrar('admin', 'admin123');
+    await p.goto(BASE + '#/contatos');
+    await p.locator('.contato-cartao', { hasText: 'João Carlos Ferreira' }).click();
+    await p.getByRole('button', { name: 'Anonimizar' }).click();
+    await aviso('anonimizados');
+    await p.keyboard.press('Escape');
+    if (await p.getByText('João Carlos Ferreira').count()) throw new Error('nome ainda aparece');
     await sair();
   });
 
@@ -183,7 +247,7 @@ try {
     await p.fill('input[aria-label="Buscar"]', 'fumaça');
     await p.waitForTimeout(200);
     const n = await p.locator('.livro__linha').count();
-    if (n !== 3) throw new Error(`esperava 3 parcelas pagas após recarregar, achei ${n}`);
+    if (n !== 4) throw new Error(`esperava 4 títulos pagos (3 parcelas, uma dividida no pagamento parcial), achei ${n}`);
   });
 
   if (erros.length) resultados.push(['falhou', 'erros de JavaScript na página', [...new Set(erros)].join(' | ')]);

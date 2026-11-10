@@ -13,14 +13,8 @@
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="default" />
     <meta name="apple-mobile-web-app-title" content="Prumo" />
-    <script>
-      // aplica o tema salvo antes da primeira pintura (evita piscar claro→escuro)
-      try {
-        var t = localStorage.getItem('prumo:tema');
-        if (t === 'escuro') document.documentElement.setAttribute('data-theme', 'dark');
-        if (t === 'claro') document.documentElement.setAttribute('data-theme', 'light');
-      } catch (e) {}
-    </script>
+    <meta name="referrer" content="strict-origin-when-cross-origin" />
+    <script src="./tema.js"></script>
   </head>
   <body>
     <div id="root"></div>

@@ -19,6 +19,12 @@ export interface Usuario {
   ativo: boolean;
   senhaHash: string;
   senhaSal: string;
+  /** iterações do hash desta senha (ausente = legado, 1.500) */
+  senhaIteracoes?: number;
+  /** senha provisória definida por um administrador: obriga a trocar no próximo login */
+  trocarSenha?: boolean;
+  /** quando a pessoa leu o aviso de privacidade (LGPD, transparência) */
+  aceitouPrivacidadeEm?: ISODateTime;
   /** Data de cadastro do usuário */
   criadoEm: ISODateTime;
   criadoPor?: ID;
@@ -54,6 +60,8 @@ export interface Contato {
   uf?: string;
   observacoes?: string;
   criadoEm: ISODateTime;
+  /** dados pessoais apagados a pedido do titular (LGPD); o histórico financeiro é mantido */
+  anonimizadoEm?: ISODateTime;
 }
 
 export type TipoCategoria = 'receita' | 'despesa';
@@ -187,7 +195,20 @@ export interface ResumoSefaz {
   demo: boolean;
 }
 
-export type TipoAtividade = 'baixa' | 'estorno' | 'criacao' | 'edicao' | 'exclusao' | 'importacao' | 'usuario' | 'config' | 'sefaz';
+export type TipoAtividade =
+  | 'baixa'
+  | 'estorno'
+  | 'criacao'
+  | 'edicao'
+  | 'exclusao'
+  | 'importacao'
+  | 'usuario'
+  | 'config'
+  | 'sefaz'
+  /** login, bloqueio, troca de senha: aparecem só no registro de segurança */
+  | 'seguranca'
+  /** exportação, anonimização e exclusão de dados pessoais (LGPD) */
+  | 'privacidade';
 
 export interface Atividade {
   id: ID;

@@ -4,7 +4,8 @@
 import { agoraISO, hoje, mesChave, type ISODate } from '../lib/dates';
 import { moeda } from '../lib/format';
 import { normalizarCnpj, normalizarDocumento } from '../lib/br';
-import { gerarSal, hashSenha } from '../lib/sha256';
+import { gerarSal, hashSenha, iguais } from '../lib/sha256';
+import { avaliarSenha, ITERACOES_LEGADO, ITERACOES_SENHA } from '../lib/seguranca';
 import { uid } from '../lib/util';
 import type { NFeDados } from '../lib/nfe/parser';
 import { atualizar, getDb } from './store';
@@ -107,6 +108,11 @@ export interface DadosBaixa {
   desconto?: number;
   /** só para baixa individual; em lote usa o valor de cada título */
   valorPago?: number;
+  /**
+   * Pagamento parcial (só individual): quanto do valor do título está sendo quitado agora.
+   * O título fica com esse valor (quitado) e o restante vira um novo título em aberto.
+   */
+  parcial?: number;
   observacao?: string;
 }
 
@@ -117,6 +123,25 @@ export function darBaixa(ids: string[], dados: DadosBaixa, usuarioId: string): v
     const alvo = db.lancamentos.filter((l) => ids.includes(l.id) && !l.baixa && !l.cancelado);
     if (alvo.length === 0) throw new ErroNegocio('Nenhum título em aberto selecionado.');
     const individual = alvo.length === 1;
+    let saldo: Lancamento | null = null;
+    if (individual && dados.parcial !== undefined) {
+      const l = alvo[0];
+      if (!(dados.parcial > 0) || dados.parcial > l.valor) throw new ErroNegocio('O valor parcial precisa ser maior que zero e menor que o valor do título.');
+      if (dados.parcial < l.valor) {
+        saldo = {
+          ...l,
+          id: uid('lan_'),
+          valor: l.valor - dados.parcial,
+          descricao: l.descricao.endsWith('(saldo)') ? l.descricao : `${l.descricao} (saldo)`,
+          linhaDigitavel: undefined,
+          observacoes: `Saldo restante do pagamento parcial de ${dados.data.split('-').reverse().join('/')}.`,
+          criadoEm: agoraISO(),
+          criadoPor: usuarioId,
+          atualizadoEm: undefined,
+        };
+        alvo[0] = { ...l, valor: dados.parcial };
+      }
+    }
     const baixas = new Map<string, Baixa>(
       alvo.map((l) => {
         const juros = individual ? dados.juros ?? 0 : 0;
@@ -125,7 +150,7 @@ export function darBaixa(ids: string[], dados: DadosBaixa, usuarioId: string): v
           l.id,
           {
             data: dados.data,
-            valorPago: individual && dados.valorPago ? dados.valorPago : l.valor + juros - desconto,
+            valorPago: individual && dados.valorPago && dados.parcial === undefined ? dados.valorPago : l.valor + juros - desconto,
             juros,
             desconto,
             contaId: dados.contaId,
@@ -138,9 +163,13 @@ export function darBaixa(ids: string[], dados: DadosBaixa, usuarioId: string): v
     );
     const total = [...baixas.values()].reduce((a, b) => a + b.valorPago, 0);
     const verbo = alvo[0].tipo === 'pagar' ? 'pagou' : 'recebeu';
-    const texto = individual ? `${verbo} “${alvo[0].descricao}”` : `${verbo} ${alvo.length} títulos (${moeda(total)})`;
+    const texto = individual
+      ? `${verbo} ${saldo ? `parte (${moeda(total)}) de` : ''} “${alvo[0].descricao}”`.replace('  ', ' ')
+      : `${verbo} ${alvo.length} títulos (${moeda(total)})`;
+    const porId = new Map(alvo.map((l) => [l.id, l]));
+    const lancamentos = db.lancamentos.map((l) => (baixas.has(l.id) ? { ...(porId.get(l.id) ?? l), baixa: baixas.get(l.id) } : l));
     return comAtividade(
-      { ...db, lancamentos: db.lancamentos.map((l) => (baixas.has(l.id) ? { ...l, baixa: baixas.get(l.id) } : l)) },
+      { ...db, lancamentos: saldo ? [...lancamentos, saldo] : lancamentos },
       usuarioId,
       'baixa',
       texto,
@@ -193,6 +222,39 @@ export function excluirContato(id: string, usuarioId: string): void {
   if (usados > 0) throw new ErroNegocio(`Este contato tem ${usados} lançamento(s). Para preservar o histórico, ele não pode ser excluído.`);
   const c = db.contatos.find((x) => x.id === id);
   atualizar((d) => comAtividade({ ...d, contatos: d.contatos.filter((x) => x.id !== id) }, usuarioId, 'exclusao', `excluiu o contato ${c?.nome ?? ''}`));
+}
+
+/**
+ * Direito de eliminação/anonimização (LGPD art. 18, IV e VI) para um cliente ou fornecedor.
+ * Os títulos e as notas continuam (guarda fiscal obrigatória, em regra 5 anos: LGPD art. 16, I),
+ * mas o cadastro perde nome, documento e contatos, e o nome sai das descrições dos títulos.
+ */
+export function anonimizarContato(id: string, usuarioId: string): void {
+  atualizar((db) => {
+    const c = db.contatos.find((x) => x.id === id);
+    if (!c) throw new ErroNegocio('Contato não encontrado.');
+    if (c.anonimizadoEm) return db;
+    const nomes = [c.nome, c.fantasia].filter((n): n is string => !!n && n.length >= 3).sort((a, b) => b.length - a.length);
+    const limpar = (t: string) => nomes.reduce((acc, n) => acc.split(n).join('titular anonimizado'), t);
+    const anon: Contato = {
+      id: c.id,
+      tipo: c.tipo,
+      nome: 'Titular anonimizado',
+      documento: '',
+      criadoEm: c.criadoEm,
+      anonimizadoEm: agoraISO(),
+    };
+    return comAtividade(
+      {
+        ...db,
+        contatos: db.contatos.map((x) => (x.id === id ? anon : x)),
+        lancamentos: db.lancamentos.map((l) => (l.contatoId === id ? { ...l, descricao: limpar(l.descricao), observacoes: l.observacoes ? limpar(l.observacoes) : l.observacoes } : l)),
+      },
+      usuarioId,
+      'privacidade',
+      'anonimizou os dados pessoais de um contato a pedido do titular',
+    );
+  });
 }
 
 // ---------- Notas fiscais ----------
@@ -410,7 +472,7 @@ export function marcarSincronizacao(): void {
   atualizar((db) => ({ ...db, configSefaz: { ...db.configSefaz, ultimaSincronizacao: agoraISO() } }));
 }
 
-// ---------- Usuários ----------
+// ---------- Usuários (com regras de LGPD e segurança) ----------
 
 export interface DadosUsuario {
   id?: string;
@@ -424,11 +486,23 @@ export interface DadosUsuario {
   senha?: string;
 }
 
+function novaSenha(senha: string, contexto: { login: string; nome: string; email: string }) {
+  const av = avaliarSenha(senha, contexto);
+  if (!av.ok) throw new ErroNegocio(av.problemas[0]);
+  const sal = gerarSal();
+  return { senhaSal: sal, senhaHash: hashSenha(senha, sal, ITERACOES_SENHA), senhaIteracoes: ITERACOES_SENHA };
+}
+
+export function conferirSenha(u: Usuario, senha: string): boolean {
+  return iguais(hashSenha(senha, u.senhaSal, u.senhaIteracoes ?? ITERACOES_LEGADO), u.senhaHash);
+}
+
 export function salvarUsuario(dados: DadosUsuario, quemFaz: string): Usuario {
   const db = getDb();
   const login = dados.login.trim().toLowerCase();
   const email = dados.email.trim().toLowerCase();
-  if (!dados.nome.trim()) throw new ErroNegocio('Informe o nome.');
+  const nome = dados.nome.trim();
+  if (!nome) throw new ErroNegocio('Informe o nome.');
   if (!/^[a-z0-9._-]{3,}$/.test(login)) throw new ErroNegocio('O login precisa ter 3+ caracteres: letras, números, ponto, hífen ou sublinhado.');
   if (!/^\S+@\S+\.\S+$/.test(email)) throw new ErroNegocio('E-mail inválido.');
   if (db.usuarios.some((u) => u.id !== dados.id && u.login === login)) throw new ErroNegocio('Este login já está em uso.');
@@ -439,29 +513,26 @@ export function salvarUsuario(dados: DadosUsuario, quemFaz: string): Usuario {
     if (!atual) throw new ErroNegocio('Usuário não encontrado.');
     const restariaAdmin = db.usuarios.some((u) => u.id !== atual.id && u.papel === 'admin' && u.ativo) || (dados.papel === 'admin' && dados.ativo);
     if (!restariaAdmin) throw new ErroNegocio('O sistema precisa de pelo menos um administrador ativo.');
-    let atualizado: Usuario = { ...atual, nome: dados.nome.trim(), email, login, cargo: dados.cargo, telefone: dados.telefone, papel: dados.papel, ativo: dados.ativo };
-    if (dados.senha) {
-      if (dados.senha.length < 6) throw new ErroNegocio('A senha precisa ter pelo menos 6 caracteres.');
-      const sal = gerarSal();
-      atualizado = { ...atualizado, senhaSal: sal, senhaHash: hashSenha(dados.senha, sal) };
-    }
-    atualizar((d) => comAtividade({ ...d, usuarios: d.usuarios.map((u) => (u.id === atualizado.id ? atualizado : u)) }, quemFaz, 'usuario', `atualizou o usuário ${atualizado.nome}`, { tipo: 'usuario', id: atualizado.id }));
+    let atualizado: Usuario = { ...atual, nome, email, login, cargo: dados.cargo, telefone: dados.telefone, papel: dados.papel, ativo: dados.ativo };
+    // senha redefinida por outra pessoa é provisória: a pessoa troca no próximo login
+    if (dados.senha) atualizado = { ...atualizado, ...novaSenha(dados.senha, { login, nome, email }), trocarSenha: atual.id !== quemFaz };
+    const texto = `atualizou o usuário ${atualizado.nome}${dados.senha ? ' (senha redefinida)' : ''}`;
+    atualizar((d) => comAtividade({ ...d, usuarios: d.usuarios.map((u) => (u.id === atualizado.id ? atualizado : u)) }, quemFaz, 'usuario', texto, { tipo: 'usuario', id: atualizado.id }));
     return atualizado;
   }
 
-  if (!dados.senha || dados.senha.length < 6) throw new ErroNegocio('A senha inicial precisa ter pelo menos 6 caracteres.');
-  const sal = gerarSal();
+  if (!dados.senha) throw new ErroNegocio('Defina uma senha inicial.');
   const novo: Usuario = {
     id: uid('usr_'),
-    nome: dados.nome.trim(),
+    nome,
     email,
     login,
     cargo: dados.cargo,
     telefone: dados.telefone,
     papel: dados.papel,
     ativo: dados.ativo,
-    senhaSal: sal,
-    senhaHash: hashSenha(dados.senha, sal),
+    ...novaSenha(dados.senha, { login, nome, email }),
+    trocarSenha: true,
     criadoEm: agoraISO(),
     criadoPor: quemFaz,
   };
@@ -469,30 +540,115 @@ export function salvarUsuario(dados: DadosUsuario, quemFaz: string): Usuario {
   return novo;
 }
 
+/**
+ * Exclusão de usuário conforme a LGPD: os dados pessoais são apagados de verdade e o nome
+ * some também da trilha de atividades. O que a pessoa lançou continua no histórico financeiro
+ * (obrigação legal de guarda), aparecendo como "Usuário removido".
+ */
+function apagarUsuario(db: Database, id: string): Database {
+  const alvo = db.usuarios.find((u) => u.id === id);
+  if (!alvo) return db;
+  const primeiro = alvo.nome.split(' ')[0];
+  return {
+    ...db,
+    usuarios: db.usuarios.filter((u) => u.id !== id),
+    atividades: db.atividades.map((a) => {
+      let texto = a.usuarioId === id && a.texto.startsWith(primeiro) ? `Usuário removido${a.texto.slice(primeiro.length)}` : a.texto;
+      texto = texto.split(alvo.nome).join('usuário removido');
+      return texto === a.texto ? a : { ...a, texto };
+    }),
+  };
+}
+
 export function excluirUsuario(id: string, quemFaz: string): void {
-  if (id === quemFaz) throw new ErroNegocio('Você não pode excluir o próprio usuário.');
+  if (id === quemFaz) throw new ErroNegocio('Para excluir a própria conta, use Configurações → Privacidade.');
   const db = getDb();
   const alvo = db.usuarios.find((u) => u.id === id);
   if (!alvo) return;
   if (alvo.papel === 'admin' && !db.usuarios.some((u) => u.id !== id && u.papel === 'admin' && u.ativo)) {
     throw new ErroNegocio('Não dá para excluir o último administrador.');
   }
-  atualizar((d) => comAtividade({ ...d, usuarios: d.usuarios.filter((u) => u.id !== id) }, quemFaz, 'usuario', `excluiu o usuário ${alvo.nome}`));
+  atualizar((d) => comAtividade(apagarUsuario(d, id), quemFaz, 'privacidade', 'excluiu um usuário e apagou os dados pessoais dele'));
 }
 
-export function registrarAcesso(usuarioId: string): void {
-  atualizar((db) => ({ ...db, usuarios: db.usuarios.map((u) => (u.id === usuarioId ? { ...u, ultimoAcesso: agoraISO() } : u)) }));
-}
-
-export function trocarPropriaSenha(usuarioId: string, atual: string, nova: string): void {
+/** Direito de eliminação (LGPD art. 18, VI): a própria pessoa apaga a conta, confirmando a senha. */
+export function excluirMinhaConta(usuarioId: string, senha: string): void {
   const db = getDb();
   const u = db.usuarios.find((x) => x.id === usuarioId);
   if (!u) throw new ErroNegocio('Usuário não encontrado.');
-  if (hashSenha(atual, u.senhaSal) !== u.senhaHash) throw new ErroNegocio('A senha atual não confere.');
-  if (nova.length < 6) throw new ErroNegocio('A nova senha precisa ter pelo menos 6 caracteres.');
-  const sal = gerarSal();
+  if (!conferirSenha(u, senha)) throw new ErroNegocio('Senha incorreta.');
+  if (u.papel === 'admin' && !db.usuarios.some((x) => x.id !== usuarioId && x.papel === 'admin' && x.ativo)) {
+    throw new ErroNegocio('Você é o único administrador. Promova outra pessoa a administrador antes de excluir a sua conta.');
+  }
+  atualizar((d) => {
+    const limpo = apagarUsuario(d, usuarioId);
+    const a: Atividade = { id: uid('atv_'), em: agoraISO(), usuarioId, tipo: 'privacidade', texto: 'Um usuário excluiu a própria conta (dados pessoais apagados)' };
+    return { ...limpo, atividades: [a, ...limpo.atividades] };
+  });
+}
+
+/** Direito de correção (art. 18, III): a pessoa atualiza os próprios dados. */
+export function editarMeuPerfil(usuarioId: string, dados: { nome: string; email: string; telefone?: string; cargo?: string }): void {
+  const u = getDb().usuarios.find((x) => x.id === usuarioId);
+  if (!u) throw new ErroNegocio('Usuário não encontrado.');
+  salvarUsuario({ id: u.id, login: u.login, papel: u.papel, ativo: u.ativo, nome: dados.nome, email: dados.email, telefone: dados.telefone, cargo: dados.cargo }, usuarioId);
+}
+
+/** Direitos de acesso e portabilidade (art. 18, II e V): tudo o que o sistema guarda sobre a pessoa. */
+export function exportarMeusDados(usuarioId: string): string {
+  const db = getDb();
+  const u = db.usuarios.find((x) => x.id === usuarioId);
+  if (!u) throw new ErroNegocio('Usuário não encontrado.');
+  const { senhaHash: _h, senhaSal: _s, ...perfil } = u;
+  void _h;
+  void _s;
+  const dados = {
+    geradoEm: agoraISO(),
+    sistema: 'Prumo',
+    controlador: { razaoSocial: db.empresa.razaoSocial, cnpj: db.empresa.cnpj },
+    perfil: { ...perfil, senha: 'guardada apenas como hash irreversível (não exportada)' },
+    atividades: db.atividades.filter((a) => a.usuarioId === usuarioId).map(({ em, tipo, texto }) => ({ em, tipo, texto })),
+    lancamentosCriados: db.lancamentos.filter((l) => l.criadoPor === usuarioId).length,
+    baixasRegistradas: db.lancamentos.filter((l) => l.baixa?.usuarioId === usuarioId).length,
+    notasImportadas: db.notas.filter((n) => n.importadaPor === usuarioId).length,
+    ondeFicam: 'Neste navegador, neste aparelho (localStorage). Nada é enviado a servidores do Prumo na V1.',
+  };
+  atualizar((d) => comAtividade(d, usuarioId, 'privacidade', 'exportou os próprios dados pessoais'));
+  return JSON.stringify(dados, null, 2);
+}
+
+export function registrarAceitePrivacidade(usuarioId: string): void {
+  atualizar((db) => ({ ...db, usuarios: db.usuarios.map((u) => (u.id === usuarioId ? { ...u, aceitouPrivacidadeEm: agoraISO() } : u)) }));
+}
+
+export function registrarEventoSeguranca(usuarioId: string, texto: string): void {
+  atualizar((db) => comAtividade(db, usuarioId, 'seguranca', texto));
+}
+
+/** Login ok: registra acesso e, se a senha ainda usa o hash antigo, refaz com o padrão atual. */
+export function registrarAcesso(usuarioId: string, senhaDigitada?: string): void {
+  atualizar((db) => {
+    const usuarios = db.usuarios.map((u) => {
+      if (u.id !== usuarioId) return u;
+      const base = { ...u, ultimoAcesso: agoraISO() };
+      if (senhaDigitada && (u.senhaIteracoes ?? ITERACOES_LEGADO) < ITERACOES_SENHA) {
+        const sal = gerarSal();
+        return { ...base, senhaSal: sal, senhaHash: hashSenha(senhaDigitada, sal, ITERACOES_SENHA), senhaIteracoes: ITERACOES_SENHA };
+      }
+      return base;
+    });
+    return comAtividade({ ...db, usuarios }, usuarioId, 'seguranca', 'entrou no sistema');
+  });
+}
+
+export function trocarPropriaSenha(usuarioId: string, atual: string, nova: string): void {
+  const u = getDb().usuarios.find((x) => x.id === usuarioId);
+  if (!u) throw new ErroNegocio('Usuário não encontrado.');
+  if (!conferirSenha(u, atual)) throw new ErroNegocio('A senha atual não confere.');
+  if (atual === nova) throw new ErroNegocio('A nova senha precisa ser diferente da atual.');
+  const s = novaSenha(nova, { login: u.login, nome: u.nome, email: u.email });
   atualizar((d) =>
-    comAtividade({ ...d, usuarios: d.usuarios.map((x) => (x.id === usuarioId ? { ...x, senhaSal: sal, senhaHash: hashSenha(nova, sal) } : x)) }, usuarioId, 'usuario', 'trocou a própria senha'),
+    comAtividade({ ...d, usuarios: d.usuarios.map((x) => (x.id === usuarioId ? { ...x, ...s, trocarSenha: false } : x)) }, usuarioId, 'seguranca', 'trocou a própria senha'),
   );
 }
 

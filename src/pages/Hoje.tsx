@@ -65,6 +65,67 @@ function LinhaTitulo({
   );
 }
 
+function PrimeirosPassos({ usuarioId, aoImportar, aoLancar, podeLancar }: { usuarioId: string; aoImportar: () => void; aoLancar: () => void; podeLancar: boolean }) {
+  const chave = `prumo:boasvindas:${usuarioId}`;
+  const [visivel, setVisivel] = useState(() => {
+    try {
+      return localStorage.getItem(chave) !== 'ok';
+    } catch {
+      return true;
+    }
+  });
+  if (!visivel) return null;
+  const fechar = () => {
+    try {
+      localStorage.setItem(chave, 'ok');
+    } catch {
+      /* ignora */
+    }
+    setVisivel(false);
+  };
+  return (
+    <section className="boas-vindas surgir" aria-label="Primeiros passos">
+      <div className="boas-vindas__cabeca">
+        <div>
+          <p className="rotulo">Primeiros passos</p>
+          <h2>Quatro coisas para experimentar</h2>
+        </div>
+        <button type="button" className="btn btn--fantasma btn--p" onClick={fechar}>
+          Já vi, esconder
+        </button>
+      </div>
+      <ol className="boas-vindas__lista">
+        <li>
+          <strong>Registre um pagamento</strong>
+          <span>Em “Próximos 14 dias”, clique em Pagar numa conta de hoje. Depois teste o Desfazer.</span>
+        </li>
+        <li>
+          <strong>Cole um boleto</strong>
+          <span>Em Lançar → Conta a pagar, cole a linha digitável: valor e vencimento se preenchem sozinhos.</span>
+          {podeLancar && (
+            <button type="button" className="link" onClick={aoLancar}>
+              Abrir agora
+            </button>
+          )}
+        </li>
+        <li>
+          <strong>Importe uma nota fiscal</strong>
+          <span>Baixe o XML de exemplo e importe: o fornecedor e as contas a pagar são criados pelas duplicatas.</span>
+          {podeLancar && (
+            <button type="button" className="link" onClick={aoImportar}>
+              Importar XML
+            </button>
+          )}
+        </li>
+        <li>
+          <strong>Leve no celular</strong>
+          <span>Abra o mesmo endereço no celular e use “Adicionar à tela inicial”: o Prumo vira um aplicativo.</span>
+        </li>
+      </ol>
+    </section>
+  );
+}
+
 export function Hoje() {
   const db = useDb();
   const usuario = useUsuario();
@@ -90,7 +151,7 @@ export function Hoje() {
   if (pagar.hoje.qtd && receber.hoje.qtd) {
     frases.push(
       <>
-        Hoje vencem {plural(pagar.hoje.qtd, 'conta', 'contas')} a pagar (<Grifo tom="saida">{moeda(pagar.hoje.total)}</Grifo>) e entram{' '}
+        Hoje {pagar.hoje.qtd === 1 ? 'vence 1 conta' : `vencem ${pagar.hoje.qtd} contas`} a pagar (<Grifo tom="saida">{moeda(pagar.hoje.total)}</Grifo>) e entram{' '}
         <Grifo tom="entrada">{moeda(receber.hoje.total)}</Grifo> de {plural(receber.hoje.qtd, 'recebimento', 'recebimentos')}.
       </>,
     );
@@ -212,6 +273,14 @@ export function Hoje() {
 
   return (
     <div className="hoje">
+      {db.demo && (
+        <PrimeirosPassos
+          usuarioId={usuario.id}
+          podeLancar={pode('lancar')}
+          aoImportar={() => acoes.importarNotas()}
+          aoLancar={() => acoes.novoLancamento({ tipo: 'pagar' })}
+        />
+      )}
       <section className="hoje__abertura">
         <div className="hoje__manchete surgir">
           <p className="rotulo">{dataExtenso(ref)}</p>
@@ -331,7 +400,7 @@ export function Hoje() {
             </span>
           </div>
           <ol className="atividades">
-            {db.atividades.slice(0, 7).map((a) => {
+            {db.atividades.filter((a) => a.tipo !== 'seguranca' && a.tipo !== 'privacidade').slice(0, 7).map((a) => {
               const u = idx.usuarios.get(a.usuarioId);
               return (
                 <li key={a.id}>

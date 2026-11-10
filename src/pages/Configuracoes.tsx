@@ -1,12 +1,12 @@
 import { useState } from 'react';
-import { useSearchParams } from 'react-router';
-import { hoje, tempoRelativo } from '../lib/dates';
+import { Link, useSearchParams } from 'react-router';
+import { dataBR, hoje, tempoRelativo } from '../lib/dates';
 import { moeda, plural } from '../lib/format';
-import { BANCOS, bancoPorCodigo, cnpjValido, mascaraCnpj, normalizarCnpj, UFS } from '../lib/br';
-import { baixarArquivo, lerArquivoTexto } from '../lib/util';
-import { exportarBackup, restaurarDemonstracao, substituirBanco, useDb, validarBackup } from '../data/store';
+import { BANCOS, bancoPorCodigo, cnpjValido, mascaraCnpj, mascaraTelefone, normalizarCnpj, UFS } from '../lib/br';
+import { baixarArquivo, lerArquivoTexto, LIMITE_BACKUP_BYTES } from '../lib/util';
+import { apagarDadosDoAparelho, exportarBackup, restaurarDemonstracao, substituirBanco, useDb, validarBackup } from '../data/store';
 import { saldoConta } from '../data/selectors';
-import { excluirCategoria, salvarCategoria, salvarContaBancaria, salvarEmpresa, trocarPropriaSenha, zerarDados } from '../data/actions';
+import { editarMeuPerfil, excluirCategoria, excluirMinhaConta, exportarMeusDados, salvarCategoria, salvarContaBancaria, salvarEmpresa, trocarPropriaSenha, zerarDados } from '../data/actions';
 import type { ContaBancaria, Empresa, Regime, TipoCategoria, TipoConta } from '../data/types';
 import { NOME_PAPEL, useAuth, useUsuario } from '../auth/auth';
 import { consultarCnpj } from '../services/brasilapi';
@@ -14,8 +14,9 @@ import { useAvisos } from '../components/Avisos';
 import { Camada } from '../components/Camada';
 import { Icone } from '../components/Icone';
 import { Avatar, Botao, Caixa, Campo, CarimboTexto, Entrada, EntradaMoeda, EntradaSenha, Selecao } from '../components/ui';
+import { MedidorSenha } from '../components/MedidorSenha';
 
-type Aba = 'empresa' | 'contas' | 'categorias' | 'sefaz' | 'perfil' | 'dados';
+type Aba = 'empresa' | 'contas' | 'categorias' | 'sefaz' | 'perfil' | 'privacidade' | 'dados';
 
 const REGIMES: Record<Regime, string> = { simples: 'Simples Nacional', presumido: 'Lucro Presumido', real: 'Lucro Real', mei: 'MEI' };
 const TIPOS_CONTA: Record<TipoConta, string> = { corrente: 'Conta corrente', poupanca: 'Poupança', caixa: 'Caixa (dinheiro)', investimento: 'Investimento' };
@@ -347,6 +348,10 @@ function AbaSefaz() {
 function AbaPerfil() {
   const usuario = useUsuario();
   const { avisar, erro } = useAvisos();
+  const [nome, setNome] = useState(usuario.nome);
+  const [email, setEmail] = useState(usuario.email);
+  const [telefone, setTelefone] = useState(usuario.telefone ?? '');
+  const [cargo, setCargo] = useState(usuario.cargo ?? '');
   const [atual, setAtual] = useState('');
   const [nova, setNova] = useState('');
   const [confirma, setConfirma] = useState('');
@@ -357,11 +362,46 @@ function AbaPerfil() {
         <div>
           <strong style={{ fontSize: 18 }}>{usuario.nome}</strong>
           <div className="muted">
-            {NOME_PAPEL[usuario.papel]} · {usuario.email} · login <span className="mono">{usuario.login}</span>
+            {NOME_PAPEL[usuario.papel]} · login <span className="mono">{usuario.login}</span> · cadastrado em {dataBR(usuario.criadoEm.slice(0, 10))}
           </div>
         </div>
       </div>
+
       <h3 className="detalhe__h3" style={{ marginTop: 18 }}>
+        Meus dados
+      </h3>
+      <form
+        className="grade-form"
+        onSubmit={(e) => {
+          e.preventDefault();
+          try {
+            editarMeuPerfil(usuario.id, { nome, email, telefone: telefone || undefined, cargo: cargo || undefined });
+            avisar('Dados atualizados.');
+          } catch (er) {
+            erro(er);
+          }
+        }}
+      >
+        <Campo rotulo="Nome completo" htmlFor="p-nome">
+          <Entrada id="p-nome" value={nome} onChange={(e) => setNome(e.target.value)} />
+        </Campo>
+        <Campo className="c3" rotulo="E-mail" htmlFor="p-email">
+          <Entrada id="p-email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} />
+        </Campo>
+        <Campo className="c3" rotulo="Telefone" htmlFor="p-tel">
+          <Entrada id="p-tel" inputMode="tel" value={telefone} onChange={(e) => setTelefone(mascaraTelefone(e.target.value))} />
+        </Campo>
+        <Campo rotulo="Cargo" htmlFor="p-cargo">
+          <Entrada id="p-cargo" value={cargo} onChange={(e) => setCargo(e.target.value)} />
+        </Campo>
+        <div>
+          <Botao type="submit" icone="check">
+            Salvar meus dados
+          </Botao>
+        </div>
+      </form>
+
+      <h3 className="detalhe__h3" style={{ marginTop: 30 }}>
         Trocar senha
       </h3>
       <form
@@ -383,8 +423,9 @@ function AbaPerfil() {
         <Campo rotulo="Senha atual" htmlFor="p-atual">
           <EntradaSenha id="p-atual" value={atual} onChange={(e) => setAtual(e.target.value)} autoComplete="current-password" />
         </Campo>
-        <Campo className="c3" rotulo="Nova senha" htmlFor="p-nova" dica="Mínimo de 6 caracteres.">
+        <Campo className="c3" rotulo="Nova senha" htmlFor="p-nova" dica="8+ caracteres, letras e números.">
           <EntradaSenha id="p-nova" value={nova} onChange={(e) => setNova(e.target.value)} autoComplete="new-password" />
+          <MedidorSenha senha={nova} contexto={usuario} />
         </Campo>
         <Campo className="c3" rotulo="Confirmar nova senha" htmlFor="p-conf">
           <EntradaSenha id="p-conf" value={confirma} onChange={(e) => setConfirma(e.target.value)} autoComplete="new-password" />
@@ -395,6 +436,143 @@ function AbaPerfil() {
           </Botao>
         </div>
       </form>
+    </div>
+  );
+}
+
+function AbaPrivacidade() {
+  const db = useDb();
+  const usuario = useUsuario();
+  const { pode, sair } = useAuth();
+  const { erro } = useAvisos();
+  const [excluindo, setExcluindo] = useState(false);
+  const [senhaConf, setSenhaConf] = useState('');
+  const eventos = db.atividades.filter((a) => a.tipo === 'seguranca' || a.tipo === 'privacidade').slice(0, 40);
+
+  return (
+    <div className="config__form dados">
+      <div className="aviso-caixa">
+        <Icone nome="escudo" />
+        <span>
+          Você controla os seus dados pessoais (LGPD, art. 18). Aqui você baixa uma cópia, corrige em <strong>Meu perfil</strong> ou exclui a sua conta.{' '}
+          <Link to="/privacidade">Ler o aviso de privacidade</Link>.
+        </span>
+      </div>
+      <ul className="dados__lista">
+        <li>
+          <div>
+            <strong>Baixar meus dados</strong>
+            <span>Um arquivo com o seu perfil e tudo o que você fez no sistema (sem a senha).</span>
+          </div>
+          <Botao
+            icone="baixar"
+            onClick={() => {
+              try {
+                baixarArquivo(`prumo-meus-dados-${usuario.login}-${hoje()}.json`, exportarMeusDados(usuario.id), 'application/json');
+              } catch (e) {
+                erro(e);
+              }
+            }}
+          >
+            Baixar
+          </Botao>
+        </li>
+        <li>
+          <div>
+            <strong>Excluir minha conta</strong>
+            <span>Apaga seu nome, e-mail, login e telefone. O que você lançou fica no histórico da empresa como “Usuário removido” (guarda obrigatória).</span>
+          </div>
+          <Botao variante="perigo" icone="lixeira" onClick={() => setExcluindo(true)}>
+            Excluir conta
+          </Botao>
+        </li>
+        <li>
+          <div>
+            <strong>Apagar tudo deste aparelho</strong>
+            <span>Remove deste navegador todos os dados do Prumo (empresa, lançamentos, usuários, sessão). Use antes de devolver ou vender o computador.</span>
+          </div>
+          <Botao
+            variante="perigo"
+            icone="lixeira"
+            disabled={!pode('config')}
+            title={pode('config') ? undefined : 'Só administradores'}
+            onClick={() => {
+              if (!window.confirm('Apagar TODOS os dados do Prumo deste aparelho? Sem backup, não há como recuperar.')) return;
+              apagarDadosDoAparelho();
+            }}
+          >
+            Apagar tudo
+          </Botao>
+        </li>
+      </ul>
+
+      {pode('config') && (
+        <section style={{ marginTop: 30 }}>
+          <h3 className="detalhe__h3">Registro de segurança e privacidade</h3>
+          <p className="muted" style={{ fontSize: 13.5, marginBottom: 8 }}>
+            Entradas no sistema, bloqueios por senha errada, trocas de senha, exportações e exclusões de dados pessoais.
+          </p>
+          {eventos.length === 0 ? (
+            <p className="muted">Nenhum evento ainda.</p>
+          ) : (
+            <ol className="atividades">
+              {eventos.map((a) => (
+                <li key={a.id}>
+                  <Icone nome={a.tipo === 'privacidade' ? 'escudo' : 'cadeado'} tam={16} />
+                  <span className="atividades__texto">
+                    {a.texto}
+                  </span>
+                  <time className="atividades__quando">{tempoRelativo(a.em)}</time>
+                </li>
+              ))}
+            </ol>
+          )}
+        </section>
+      )}
+
+      {excluindo && (
+        <Camada
+          aberta
+          aoFechar={() => setExcluindo(false)}
+          sobretitulo="Privacidade"
+          titulo="Excluir minha conta"
+          rodape={
+            <>
+              <span className="espaco" />
+              <Botao variante="fantasma" onClick={() => setExcluindo(false)}>
+                Cancelar
+              </Botao>
+              <Botao
+                variante="perigo"
+                icone="lixeira"
+                disabled={!senhaConf}
+                onClick={() => {
+                  try {
+                    excluirMinhaConta(usuario.id, senhaConf);
+                    sair('Sua conta foi excluída e os seus dados pessoais foram apagados.');
+                  } catch (e) {
+                    erro(e);
+                  }
+                }}
+              >
+                Excluir definitivamente
+              </Botao>
+            </>
+          }
+        >
+          <p>Isto não tem volta. Serão apagados:</p>
+          <ul className="passos" style={{ margin: '10px 0 16px' }}>
+            <li>seu nome, e-mail, login, cargo e telefone;</li>
+            <li>seu nome nas atividades registradas.</li>
+          </ul>
+          <p className="muted" style={{ fontSize: 14, marginBottom: 16 }}>
+            Lançamentos, baixas e notas que você registrou continuam na empresa (são registros financeiros de guarda obrigatória), sem identificar você.
+          </p>
+          <Campo rotulo="Confirme com a sua senha" htmlFor="x-senha">
+            <EntradaSenha id="x-senha" value={senhaConf} onChange={(e) => setSenhaConf(e.target.value)} autoComplete="current-password" autoFocus />
+          </Campo>
+        </Camada>
+      )}
     </div>
   );
 }
@@ -441,6 +619,7 @@ function AbaDados() {
                   e.target.value = '';
                   if (!f) return;
                   try {
+                    if (f.size > LIMITE_BACKUP_BYTES) throw new Error('Arquivo grande demais para um backup do Prumo (limite de 25 MB).');
                     const novo = validarBackup(await lerArquivoTexto(f));
                     if (!window.confirm('Substituir TODOS os dados deste navegador pelos do backup?')) return;
                     substituirBanco(novo);
@@ -505,6 +684,7 @@ export function Configuracoes() {
     ['categorias', 'Categorias'],
     ['sefaz', 'SEFAZ'],
     ['perfil', 'Meu perfil'],
+    ['privacidade', 'Privacidade'],
     ['dados', 'Dados e backup'],
   ];
   return (
@@ -536,6 +716,7 @@ export function Configuracoes() {
       {aba === 'categorias' && <AbaCategorias />}
       {aba === 'sefaz' && <AbaSefaz />}
       {aba === 'perfil' && <AbaPerfil />}
+      {aba === 'privacidade' && <AbaPrivacidade />}
       {aba === 'dados' && <AbaDados />}
     </div>
   );

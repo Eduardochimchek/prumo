@@ -12,6 +12,7 @@ import { useAvisos } from '../components/Avisos';
 import { Camada } from '../components/Camada';
 import { Icone } from '../components/Icone';
 import { Avatar, Botao, Caixa, Campo, Entrada, EntradaSenha } from '../components/ui';
+import { MedidorSenha } from '../components/MedidorSenha';
 
 const slug = (nome: string) =>
   nome
@@ -40,7 +41,14 @@ function FormUsuario({ editando, aoFechar }: { editando?: Usuario; aoFechar: () 
   const salvar = () => {
     try {
       salvarUsuario({ id: editando?.id, nome, email, login, cargo: cargo || undefined, telefone: telefone || undefined, papel, ativo, senha: senha || undefined }, eu.id);
-      avisar(editando ? 'Usuário atualizado.' : `${nome.split(' ')[0]} cadastrado. Passe o login “${login}” e a senha para a pessoa.`, { duracao: 8000 });
+      avisar(
+        editando
+          ? senha
+            ? 'Usuário atualizado. A nova senha é provisória: a pessoa vai criar a dela no próximo acesso.'
+            : 'Usuário atualizado.'
+          : `${nome.split(' ')[0]} cadastrado. Passe o login “${login}” e a senha provisória por um canal seguro (não por e-mail aberto).`,
+        { duracao: 9000 },
+      );
       aoFechar();
     } catch (e) {
       erro(e);
@@ -119,7 +127,11 @@ function FormUsuario({ editando, aoFechar }: { editando?: Usuario; aoFechar: () 
           ))}
         </fieldset>
 
-        <Campo rotulo={editando ? 'Nova senha (deixe em branco para manter)' : 'Senha inicial'} htmlFor="u-senha" dica="Mínimo de 6 caracteres. A pessoa pode trocar depois em Meu perfil.">
+        <Campo
+          rotulo={editando ? 'Redefinir senha (deixe em branco para manter)' : 'Senha provisória'}
+          htmlFor="u-senha"
+          dica="Mínimo de 8 caracteres com letras e números. É provisória: no primeiro acesso a pessoa cria a própria senha."
+        >
           <div style={{ display: 'flex', gap: 8 }}>
             <div style={{ flex: 1 }}>
               <EntradaSenha id="u-senha" value={senha} onChange={(e) => setSenha(e.target.value)} autoComplete="new-password" />
@@ -128,6 +140,7 @@ function FormUsuario({ editando, aoFechar }: { editando?: Usuario; aoFechar: () 
               Gerar
             </Botao>
           </div>
+          <MedidorSenha senha={senha} contexto={{ login, nome, email }} />
         </Campo>
         <div>
           <Caixa rotulo="Usuário ativo (pode entrar no sistema)" checked={ativo} onChange={(e) => setAtivo(e.target.checked)} disabled={editando?.id === eu.id} />
@@ -222,10 +235,10 @@ export function Usuarios() {
                         aria-label={`Excluir ${u.nome}`}
                         onClick={(e) => {
                           e.stopPropagation();
-                          if (!window.confirm(`Excluir o usuário ${u.nome}? O histórico de atividades é mantido.`)) return;
+                          if (!window.confirm(`Excluir ${u.nome}? Os dados pessoais dele serão apagados (LGPD). O que ele lançou continua no histórico como “Usuário removido”.`)) return;
                           try {
                             excluirUsuario(u.id, eu.id);
-                            avisar('Usuário excluído.');
+                            avisar('Usuário excluído e dados pessoais apagados.');
                           } catch (er) {
                             erro(er);
                           }

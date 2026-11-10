@@ -2,10 +2,10 @@ import { useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'react-router';
 import { dataBR, hoje } from '../lib/dates';
 import { contem, moeda, plural } from '../lib/format';
-import { mascaraDocumento, tipoDocumento } from '../lib/br';
+import { documentoProtegido, mascaraDocumento, tipoDocumento } from '../lib/br';
 import { useDb } from '../data/store';
 import { emAberto, statusDe } from '../data/selectors';
-import { excluirContato } from '../data/actions';
+import { anonimizarContato, excluirContato } from '../data/actions';
 import type { Contato, TipoContato } from '../data/types';
 import { useAuth, useUsuario } from '../auth/auth';
 import { useAcoes } from '../components/Acoes';
@@ -42,11 +42,12 @@ function FichaContato({ contato, aoFechar }: { contato: Contato | null; aoFechar
       rodape={
         contato && (
           <>
-            {pode('contatos') && (
+            {pode('contatos') && titulos.length === 0 && notas.length === 0 && (
               <Botao
                 variante="fantasma"
                 icone="lixeira"
                 onClick={() => {
+                  if (!window.confirm(`Excluir ${contato.fantasia || contato.nome}?`)) return;
                   try {
                     excluirContato(contato.id, usuario.id);
                     avisar('Contato excluído.');
@@ -59,8 +60,31 @@ function FichaContato({ contato, aoFechar }: { contato: Contato | null; aoFechar
                 Excluir
               </Botao>
             )}
+            {pode('contatos') && (titulos.length > 0 || notas.length > 0) && !contato.anonimizadoEm && (
+              <Botao
+                variante="fantasma"
+                icone="escudo"
+                title="Pedido de exclusão do titular (LGPD): apaga nome, documento e contatos e mantém os valores pelo prazo legal"
+                onClick={() => {
+                  if (
+                    !window.confirm(
+                      'Anonimizar os dados pessoais deste contato (LGPD)? Nome, CPF/CNPJ, e-mail, telefone e endereço serão apagados e o nome sai das descrições. Os valores e as notas fiscais ficam guardados pelo prazo legal. Não tem volta.',
+                    )
+                  )
+                    return;
+                  try {
+                    anonimizarContato(contato.id, usuario.id);
+                    avisar('Dados pessoais anonimizados. O histórico financeiro foi mantido.');
+                  } catch (e) {
+                    erro(e);
+                  }
+                }}
+              >
+                Anonimizar
+              </Botao>
+            )}
             <span className="espaco" />
-            {pode('contatos') && (
+            {pode('contatos') && !contato.anonimizadoEm && (
               <Botao icone="editar" onClick={() => acoes.editarContato(contato.id)}>
                 Editar
               </Botao>
@@ -77,9 +101,15 @@ function FichaContato({ contato, aoFechar }: { contato: Contato | null; aoFechar
       {contato && (
         <>
           <p className="muted">{contato.nome}</p>
+          {contato.anonimizadoEm && (
+            <div className="aviso-caixa" style={{ marginTop: 12 }}>
+              <Icone nome="escudo" />
+              <span>Dados pessoais anonimizados em {dataBR(contato.anonimizadoEm.slice(0, 10))} a pedido do titular. O histórico financeiro é mantido pelo prazo legal.</span>
+            </div>
+          )}
           <dl className="lista-definicao" style={{ marginTop: 14 }}>
             <dt>{contato.documento ? tipoDocumento(contato.documento) : 'Documento'}</dt>
-            <dd className="mono">{contato.documento ? mascaraDocumento(contato.documento) : '-'}</dd>
+            <dd className="mono">{contato.documento ? (pode('contatos') ? mascaraDocumento(contato.documento) : documentoProtegido(contato.documento)) : '-'}</dd>
             <dt>E-mail</dt>
             <dd>{contato.email ? <a href={`mailto:${contato.email}`}>{contato.email}</a> : '-'}</dd>
             <dt>Telefone</dt>
@@ -263,7 +293,7 @@ export function Contatos() {
                   <Avatar nome={c.fantasia || c.nome} />
                   <span className="contato-cartao__texto">
                     <strong className="truncar">{c.fantasia || c.nome}</strong>
-                    <span className="truncar mono">{c.documento ? mascaraDocumento(c.documento) : 'sem documento'}</span>
+                    <span className="truncar mono">{c.documento ? documentoProtegido(c.documento) : c.anonimizadoEm ? 'anonimizado' : 'sem documento'}</span>
                     <span className="truncar">
                       {NOME_TIPO[c.tipo]}
                       {c.cidade ? ` · ${c.cidade}/${c.uf}` : ''}

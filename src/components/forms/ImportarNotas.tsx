@@ -7,7 +7,7 @@ import { moeda, plural } from '../../lib/format';
 import { mascaraDocumento } from '../../lib/br';
 import { ErroLeituraNFe, lerXmlNFe, type NFeDados } from '../../lib/nfe/parser';
 import { exemploNFeParaEmpresa, gerarXmlNFe } from '../../lib/nfe/exemplo';
-import { baixarArquivo, lerArquivoTexto } from '../../lib/util';
+import { baixarArquivo, lerArquivoTexto, LIMITE_XML_ARQUIVOS, LIMITE_XML_BYTES } from '../../lib/util';
 import { useDb } from '../../data/store';
 import { direcaoDaNota, importarNotas, type Direcao } from '../../data/actions';
 import { useUsuario } from '../../auth/auth';
@@ -42,7 +42,17 @@ export function ImportarNotas({ aberta, aoFechar, aoConcluir }: { aberta: boolea
   const ler = async (arquivos: FileList | File[]) => {
     setLendo(true);
     const novos: Item[] = [];
-    for (const f of Array.from(arquivos)) {
+    const lista = Array.from(arquivos);
+    if (lista.length > LIMITE_XML_ARQUIVOS) {
+      erro(new Error(`Envie no máximo ${LIMITE_XML_ARQUIVOS} arquivos por vez.`));
+      setLendo(false);
+      return;
+    }
+    for (const f of lista) {
+      if (f.size > LIMITE_XML_BYTES) {
+        novos.push({ arquivo: f.name, erro: 'Arquivo grande demais para ser um XML de nota (limite de 5 MB).', gerar: false, categoriaId: '' });
+        continue;
+      }
       if (!/\.xml$/i.test(f.name)) {
         novos.push({ arquivo: f.name, erro: 'Não é um arquivo .xml (o PDF do DANFE não serve, precisa do XML).', gerar: false, categoriaId: '' });
         continue;

@@ -53,7 +53,13 @@ async function entrar(pagina) {
   await pagina.fill('#l-usuario', 'reginaldo');
   await pagina.fill('#l-senha', 'reginaldo123');
   await pagina.click('button[type=submit]');
-  await pagina.waitForSelector('.conteudo');
+  await pagina.waitForSelector('.conteudo, .tela-cheia');
+  if (await pagina.getByRole('button', { name: 'Entendi, vamos lá' }).count()) {
+    await pagina.getByRole('button', { name: 'Entendi, vamos lá' }).click();
+    await pagina.waitForSelector('.conteudo');
+  }
+  // esconde o cartão de primeiros passos nas capturas
+  await pagina.evaluate(() => Object.keys(localStorage).length >= 0 && document.querySelectorAll('.boas-vindas .btn').forEach((b) => b.click()));
 }
 
 const quer = (n) => so.length === 0 || so.some((s) => n.includes(s));

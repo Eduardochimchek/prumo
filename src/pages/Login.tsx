@@ -1,4 +1,5 @@
 import { useState, type FormEvent } from 'react';
+import { Link } from 'react-router';
 import { useAuth } from '../auth/auth';
 import { Marca, PrumoPendulo } from '../components/Marca';
 import { Botao, Caixa, Campo, CarimboTexto, Entrada, EntradaSenha } from '../components/ui';
@@ -6,7 +7,7 @@ import { Icone } from '../components/Icone';
 import { useDb } from '../data/store';
 
 export function Login() {
-  const { entrar } = useAuth();
+  const { entrar, aviso } = useAuth();
   const db = useDb();
   const [login, setLogin] = useState('');
   const [senha, setSenha] = useState('');
@@ -61,6 +62,12 @@ export function Login() {
         <form className="login__form" onSubmit={enviar} noValidate>
           <span className="rotulo">Acesso</span>
           <h2>Entrar</h2>
+          {aviso && !erro && (
+            <div className="aviso-caixa aviso-caixa--atencao" role="status">
+              <Icone nome="relogio" />
+              <span>{aviso}</span>
+            </div>
+          )}
           <Campo rotulo="Usuário ou e-mail" htmlFor="l-usuario">
             <Entrada
               id="l-usuario"
@@ -107,7 +114,9 @@ export function Login() {
             </div>
           )}
         </form>
-        <footer className="login__rodape">Prumo 0.1 · os dados desta versão ficam guardados neste navegador</footer>
+        <footer className="login__rodape">
+          Prumo 0.1 · os dados desta versão ficam guardados neste navegador · <Link to="/privacidade">Privacidade e termos</Link>
+        </footer>
       </main>
     </div>
   );

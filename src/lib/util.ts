@@ -38,10 +38,12 @@ export type Aleatorio = ReturnType<typeof aleatorio>;
 
 type Celula = string | number | null | undefined;
 
-/** CSV no padrão do Excel brasileiro: separador ';', BOM UTF-8. */
+/** CSV no padrão do Excel brasileiro: separador ';', BOM UTF-8, protegido contra injeção de fórmula. */
 export function gerarCsv(linhas: Celula[][]): string {
   const esc = (v: Celula) => {
-    const s = v == null ? '' : String(v);
+    let s = v == null ? '' : String(v);
+    // Injeção de fórmula: texto que começa com = + - @ vira fórmula no Excel. Números (ex.: -66,30) passam.
+    if (/^[=+\-@\t\r]/.test(s) && !/^-?\d[\d.,]*$/.test(s)) s = `'${s}`;
     return /[;"\n\r]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
   };
   return '﻿' + linhas.map((l) => l.map(esc).join(';')).join('\r\n');
@@ -85,10 +87,18 @@ export async function copiarTexto(texto: string): Promise<boolean> {
   }
 }
 
-export function gerarSenha(tamanho = 10): string {
+/** Senha provisória aleatória com letras maiúsculas, minúsculas e números (sem caracteres ambíguos). */
+export function gerarSenha(tamanho = 12): string {
   const chars = 'abcdefghjkmnpqrstuvwxyzABCDEFGHJKMNPQRSTUVWXYZ23456789';
-  const arr = new Uint32Array(tamanho);
-  if (globalThis.crypto?.getRandomValues) globalThis.crypto.getRandomValues(arr);
-  else for (let i = 0; i < tamanho; i++) arr[i] = Math.floor(Math.random() * 1e9);
-  return Array.from(arr, (n) => chars[n % chars.length]).join('');
+  for (;;) {
+    const arr = new Uint32Array(tamanho);
+    if (globalThis.crypto?.getRandomValues) globalThis.crypto.getRandomValues(arr);
+    else for (let i = 0; i < tamanho; i++) arr[i] = Math.floor(Math.random() * 1e9);
+    const s = Array.from(arr, (n) => chars[n % chars.length]).join('');
+    if (/[a-z]/.test(s) && /[A-Z]/.test(s) && /\d/.test(s)) return s;
+  }
 }
+
+export const LIMITE_XML_BYTES = 5 * 1024 * 1024;
+export const LIMITE_XML_ARQUIVOS = 50;
+export const LIMITE_BACKUP_BYTES = 25 * 1024 * 1024;

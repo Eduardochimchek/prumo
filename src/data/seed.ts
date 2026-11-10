@@ -21,7 +21,6 @@ import {
 } from '../lib/dates';
 import { calcularDvCnpj } from '../lib/br';
 import { aleatorio } from '../lib/util';
-import { hashSenha } from '../lib/sha256';
 import { montarChave } from '../lib/nfe/chave';
 import { gerarLinhaDigitavel } from '../lib/boleto';
 import type {
@@ -88,6 +87,15 @@ const CATALOGO: Record<string, Produto[]> = {
   ],
 };
 
+/** sha-256 iterado de 'senha' com o sal `demo-<login>-sal` (senhas documentadas no README). */
+const HASHES_DEMO: Record<string, string> = {
+  admin: 'e65a2dcfc6d01394d9b5ccad4f8e0f4cca9ef3b7f3449fff087a6c7d312deec9',
+  reginaldo: 'daeb96682108456cb367b7470d652b1c187e28c340f89c99691df1a935ff29f8',
+  'ana.paula': '5bb113a605cbba4d950479db62aef01b67cbad5cf11347996ec0a3df70724ed9',
+  marcos: '8d1b3dca9b040f9cee3ca8e93f7cbdd5e3d8454161ff8b9fe9bacdf2b24a7bc7',
+  juliana: 'e92e6622fe66adc3258c5aac07768fca1c6bd76e9a22665fcf1f0ceab82fa867',
+};
+
 export function criarBaseDemo(ref: ISODate = hoje()): Database {
   const r = aleatorio(20_261_109);
   let seq = 0;
@@ -122,7 +130,7 @@ export function criarBaseDemo(ref: ISODate = hoje()): Database {
     cargo: string,
     diasCadastro: number,
     horasUltimoAcesso: number | null,
-    senha: string,
+    _senha: string,
     ativo = true,
   ): Usuario => {
     const sal = `demo-${login}-sal`;
@@ -136,7 +144,9 @@ export function criarBaseDemo(ref: ISODate = hoje()): Database {
       cargo,
       ativo,
       senhaSal: sal,
-      senhaHash: hashSenha(senha, sal),
+      // hashes pré-calculados (20.000 iterações) para a demonstração abrir instantânea
+      senhaHash: HASHES_DEMO[login] ?? '',
+      senhaIteracoes: 20_000,
       criadoEm: cadastro,
       ultimoAcesso:
         horasUltimoAcesso === null ? undefined : new Date(Date.now() - horasUltimoAcesso * 3_600_000).toISOString(),

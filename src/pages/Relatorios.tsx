@@ -126,7 +126,10 @@ export function Relatorios() {
           </p>
         </div>
         <div className="pagina-cabeca__acoes">
-          <Botao icone="baixar" onClick={exportarDre}>
+          <Botao icone="imprimir" onClick={() => window.print()} className="nao-imprimir">
+            Imprimir
+          </Botao>
+          <Botao icone="baixar" onClick={exportarDre} className="nao-imprimir">
             Exportar DRE
           </Botao>
         </div>

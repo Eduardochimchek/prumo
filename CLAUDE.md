@@ -46,6 +46,16 @@ npm run verificar    # typecheck + test + build + smoke (rode antes de cada comm
 - Base de demonstração (`seed.ts`) é **determinística e relativa a hoje**: use só o gerador `aleatorio(semente)`; nada de `Math.random`, `Date.now` em valores, nem `sort(() => random)` (o resultado muda entre navegadores, use `r.embaralhar`). Nomes, CNPJs e valores são fictícios.
 - Mudou o formato do banco? Incremente `VERSAO_BANCO` em `store.ts` e trate a migração (hoje a versão incompatível recria a demonstração).
 
+### Segurança e LGPD (ver `SECURITY.md` e `docs/LGPD.md`)
+- Senha: só via `avaliarSenha` + `hashSenha(senha, sal, ITERACOES_SENHA)`; guarde `senhaIteracoes`. Nunca logue, exporte ou mostre hash/sal.
+- Login passa por `entrar()` (bloqueio por tentativas, mensagem genérica). Não crie atalhos que pulem `conferirSenha`.
+- Dado pessoal novo? Registre no inventário de `docs/LGPD.md` (finalidade, base legal, retenção) e inclua em `exportarMeusDados`/anonimização.
+- Excluir pessoa = apagar/anonimizar dado pessoal **sem** apagar registro financeiro de guarda obrigatória.
+- Eventos de segurança/privacidade usam os tipos de atividade `seguranca`/`privacidade` (não aparecem no feed do “Hoje”).
+- Nada de `innerHTML`, `dangerouslySetInnerHTML`, `eval`, script inline ou CDN externo (a CSP do build bloqueia). Domínio externo novo? Adicione no `connect-src` do `vite.config.ts` e no aviso de privacidade.
+- Exportações passam por `gerarCsv` (neutraliza fórmulas). Uploads respeitam os limites de `lib/util.ts`.
+- Mostre CPF de pessoa física com `documentoProtegido` nas listas.
+
 ### Design (“Papel & Tinta”; ver `docs/DESIGN.md`)
 - Use os **tokens** de `src/styles/tokens.css` (`--tinta`, `--folha`, `--entrada`, `--saida`, `--critico`…). Não escreva cores soltas nos componentes.
 - **Cor é informação**: verde = entrada, laranja = saída, vermelho = vencido/erro, âmbar = atenção/vence hoje, latão = marca/hoje. Status sempre com rótulo (carimbo), nunca só cor.
@@ -78,6 +88,9 @@ npm run verificar    # typecheck + test + build + smoke (rode antes de cada comm
 | `src/lib/boleto.ts` | Linha digitável (47/48 dígitos) e código de barras |
 | `src/lib/nfe/` | Chave de acesso, leitor de XML (`lerXmlNFe`), XML de exemplo |
 | `src/lib/br.ts` | CNPJ (alfanumérico), CPF, máscaras, UFs (código IBGE), bancos |
+| `src/lib/seguranca.ts` | Política de senha, bloqueio por tentativas, expiração de sessão |
+| `src/pages/Privacidade.tsx` | Aviso de privacidade e termos (público) |
+| `src/components/TelasObrigatorias.tsx` | Troca de senha provisória e aviso de privacidade no 1º acesso |
 | `src/services/brasilapi.ts` | CNPJ e CEP públicos (CORS liberado) |
 | `src/services/sefaz.ts` | Interface `ProvedorSefaz` + implementação simulada |
 | `src/components/Acoes.tsx` | Central de diálogos globais (novo lançamento, baixa, detalhe, contato, importar, paleta) |

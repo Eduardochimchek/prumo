@@ -49,7 +49,7 @@ Idealizado por **Reginaldo Jeronimo**, profissional do financeiro administrativo
 
 **Contas a pagar e a receber**
 - Lançamento com **leitura do boleto**: cole a linha digitável e o Prumo preenche valor, vencimento e banco, conferindo os dígitos verificadores (inclui a regra do fator de vencimento que reiniciou em 22/02/2025).
-- Parcelamento (divide o valor) ou recorrência mensal.
+- Parcelamento (divide o valor) ou recorrência mensal; **pagamento parcial** (o saldo continua em aberto).
 - Filtros (vencidas, 7 dias, 30 dias, mês, pagas), busca, categoria, **baixa em lote**, juros/desconto, estorno e **“Desfazer”**.
 - Carimbo de “PAGO” no título quitado, histórico completo, parcelas irmãs, nota de origem.
 - Exportação para Excel (CSV no padrão brasileiro).
@@ -72,6 +72,12 @@ Idealizado por **Reginaldo Jeronimo**, profissional do financeiro administrativo
 - Suporte ao **CNPJ alfanumérico** (novo formato emitido desde julho de 2026).
 - **Usuários com data de cadastro**, quem cadastrou, último acesso, ativo/inativo e três níveis de acesso: Administrador, Financeiro e Consulta (ideal para o contador).
 - Empresa, contas bancárias, categorias, backup/restauração e “começar de verdade” (zera os dados de demonstração).
+
+**Segurança e LGPD**
+- Senhas com hash forte (sal + 20.000 iterações), política de senha com medidor, **bloqueio após 5 tentativas erradas**, sessão que expira por inatividade e senha provisória com troca obrigatória.
+- Aviso de privacidade público e no primeiro acesso; **baixar meus dados**, corrigir, **excluir minha conta** e **anonimizar cliente/fornecedor** preservando o que a lei manda guardar.
+- CPF protegido nas listas, registro de segurança e privacidade, CSP, proteção contra clickjacking e contra fórmulas maliciosas nas planilhas, limites de upload, tela amigável de erro.
+- `npm audit` no CI, Dependabot e varredura de segredos no GitHub. Detalhes em [`SECURITY.md`](SECURITY.md) e [`docs/LGPD.md`](docs/LGPD.md).
 
 **Experiência**
 - Funciona no celular como app (**PWA**: “Adicionar à tela inicial”), com navegação própria para o polegar.
@@ -128,8 +134,8 @@ npm run dev          # http://localhost:5173 (também acessível pelo celular na
 | `npm run dev` | Servidor de desenvolvimento |
 | `npm run build` | Checa os tipos e gera `dist/` |
 | `npm run preview` | Serve o build de produção |
-| `npm test` | Testes unitários (CNPJ/CPF, boleto, chave e XML de NF-e, SHA-256, base de demonstração) |
-| `npm run smoke` | Teste ponta a ponta no navegador (login, lançar, baixar, desfazer, importar XML, permissões…) |
+| `npm test` | 35 testes unitários (CNPJ/CPF, boleto, chave e XML de NF-e, senhas e bloqueio, CSV, baixa e pagamento parcial, LGPD) |
+| `npm run smoke` | 18 passos ponta a ponta no navegador (bloqueio, privacidade, lançar, baixar, parcial, desfazer, XML, senha provisória, permissões, anonimização…) |
 | `npm run screenshots` | Capturas de todas as telas (desktop e celular) em `docs/screenshots` |
 | `npm run verificar` | Tudo acima que importa antes de um commit |
 
@@ -199,7 +205,7 @@ O plano técnico completo está em [`docs/SEFAZ.md`](docs/SEFAZ.md).
 Sendo direto sobre o que esta versão é:
 
 - Os dados ficam **no navegador e no aparelho** de quem usa. Outro computador ou celular começa com a própria base. **Faça backup** em Configurações → Dados.
-- O login é **local**: protege o uso no dia a dia, mas não é segurança de servidor. As senhas são guardadas com hash e sal (SHA-256 iterado), nunca em texto puro.
+- O login é **local**: tem bloqueio por tentativas, expiração de sessão e senhas com hash forte, mas não é segurança de servidor (quem tem acesso ao computador consegue ler o armazenamento do navegador).
 - As credenciais de demonstração são públicas: **troque as senhas** antes de usar com dados reais.
 - A V2 resolve esses pontos com servidor, banco de dados, autenticação de verdade (Argon2id, sessão segura) e dados compartilhados entre a equipe.
 
@@ -235,6 +241,8 @@ Na pesquisa feita para a V1, não encontramos software de gestão financeira com
 - [`docs/PRODUTO.md`](docs/PRODUTO.md): visão, públicos, escopo e roadmap.
 - [`docs/DESIGN.md`](docs/DESIGN.md): design system “Papel & Tinta”.
 - [`docs/SEFAZ.md`](docs/SEFAZ.md): integração com a SEFAZ e notas fiscais.
+- [`docs/LGPD.md`](docs/LGPD.md): dados tratados, bases legais, retenção e direitos do titular.
+- [`SECURITY.md`](SECURITY.md): proteções aplicadas, limites e como relatar falhas.
 
 ---
 

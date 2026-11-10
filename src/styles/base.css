@@ -9,6 +9,11 @@ html {
   text-size-adjust: 100%;
   scrollbar-gutter: stable;
 }
+@media (max-width: 1023px) {
+  html {
+    scrollbar-gutter: auto;
+  }
+}
 
 body {
   margin: 0;
