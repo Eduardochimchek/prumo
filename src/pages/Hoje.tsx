@@ -1,5 +1,5 @@
 // "Hoje": a primeira página do dia. Em vez de uma parede de cartões com números,
-// uma manchete escrita a partir dos dados — o que vence, o que atrasou, como o caixa fecha.
+// uma manchete escrita a partir dos dados, o que vence, o que atrasou, como o caixa fecha.
 
 import { useMemo, useState, type ReactNode } from 'react';
 import { Link, useNavigate } from 'react-router';
@@ -145,8 +145,7 @@ export function Hoje() {
       Se nada mudar, o caixa fecha {mesLongo(mesChave(ref)).split(' de ')[0]} em <Grifo tom="neutro">{moeda(b.saldoFimMes)}</Grifo>
       {menor.data !== ref ? (
         <>
-          {' '}
-          — o dia mais apertado é {diaMesLongo(menor.data)}, com {moeda(menor.saldo)}.
+          . O dia mais apertado é {diaMesLongo(menor.data)}, com {moeda(menor.saldo)}.
         </>
       ) : (
         '.'
@@ -300,7 +299,7 @@ export function Hoje() {
               ))}
               {dia.itens.length > 8 && (
                 <li className="muted" style={{ padding: '10px 0' }}>
-                  e mais {dia.itens.length - 8} —{' '}
+                  e mais {dia.itens.length - 8}:{' '}
                   <Link to={`/contas/pagar?de=${dia.data}&ate=${dia.data}`}>ver todos</Link>
                 </li>
               )}

@@ -2,7 +2,7 @@
   "name": "prumo",
   "private": true,
   "version": "0.1.0",
-  "description": "Prumo — gestão financeira e administrativa para pequenas e médias empresas.",
+  "description": "Prumo, gestão financeira e administrativa para pequenas e médias empresas.",
   "type": "module",
   "license": "UNLICENSED",
   "scripts": {

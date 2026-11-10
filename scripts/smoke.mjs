@@ -59,7 +59,7 @@ try {
   };
   const aviso = (texto) => p.locator('.aviso', { hasText: texto }).first().waitFor({ timeout: 4000 });
 
-  console.log('Prumo — teste de fumaça');
+  console.log('Prumo: teste de fumaça');
 
   await passo('senha errada é recusada', async () => {
     await p.goto(BASE);
@@ -195,5 +195,5 @@ try {
 
 const falhas = resultados.filter((r) => r[0] === 'falhou');
 console.log(`\n${resultados.length - falhas.length}/${resultados.length} passos ok`);
-for (const f of falhas) console.log('FALHA:', f[1], '—', f[2]);
+for (const f of falhas) console.log('FALHA:', f[1], '·', f[2]);
 process.exit(falhas.length ? 1 : 0);

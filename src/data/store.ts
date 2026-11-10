@@ -98,7 +98,7 @@ export function validarBackup(json: string): Database {
     db.empresa;
   if (!ok) throw new Error('Arquivo de backup inválido ou de outra versão do Prumo.');
   if (!db.usuarios.some((u) => u.papel === 'admin' && u.ativo)) {
-    throw new Error('O backup não tem nenhum administrador ativo — importá-lo trancaria o sistema.');
+    throw new Error('O backup não tem nenhum administrador ativo. Importá-lo trancaria o sistema.');
   }
   return db;
 }

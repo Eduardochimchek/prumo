@@ -19,7 +19,7 @@ export function moeda(c: Centavos, opts: { sinal?: boolean } = {}): string {
 /** Só o número: 1.234,56 */
 export const valorSemSimbolo = (c: Centavos): string => num2.format(c / 100);
 
-/** R$ 12,4 mil · R$ 1,2 mi · R$ 980 — para eixos e rótulos curtos. */
+/** R$ 12,4 mil · R$ 1,2 mi · R$ 980, para eixos e rótulos curtos. */
 export function moedaCompacta(c: Centavos): string {
   const v = Math.abs(c) / 100;
   const sinal = c < 0 ? '−' : '';
@@ -87,7 +87,7 @@ export function iniciais(nome: string): string {
   return (partes[0][0] + partes[partes.length - 1][0]).toUpperCase();
 }
 
-/** Remove acentos e baixa a caixa — para buscas tolerantes ("agua" acha "Água"). */
+/** Remove acentos e baixa a caixa, para buscas tolerantes ("agua" acha "Água"). */
 export const normalizarBusca = (s: string): string =>
   s.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().trim();
 

@@ -1,5 +1,5 @@
 // SHA-256 em JavaScript puro. Não usamos crypto.subtle porque ele só existe em contexto seguro
-// (HTTPS/localhost) — e queremos que o login funcione também ao testar pelo celular na rede local.
+// (HTTPS/localhost), e queremos que o login funcione também ao testar pelo celular na rede local.
 // V1 apenas: na V2 a senha é verificada no servidor (Argon2id).
 
 const K = new Uint32Array([

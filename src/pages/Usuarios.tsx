@@ -270,7 +270,7 @@ export function Usuarios() {
                 <td>{acao}</td>
                 {[a, f, l].map((ok, i) => (
                   <td key={i} className="cen">
-                    {ok ? <Icone nome="check" tam={17} className="entrada-txt" titulo="Permitido" /> : <span className="muted" aria-label="Não permitido">—</span>}
+                    {ok ? <Icone nome="check" tam={17} className="entrada-txt" titulo="Permitido" /> : <span className="muted" aria-label="Não permitido">-</span>}
                   </td>
                 ))}
               </tr>

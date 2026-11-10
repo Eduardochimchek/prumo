@@ -1,11 +1,11 @@
-# Integração com a SEFAZ — plano técnico
+# Integração com a SEFAZ: plano técnico
 
 > Resumo: na V1 o Prumo **lê XML de NF-e, valida chaves e simula a caixa de entrada da SEFAZ**. A integração real precisa de um servidor com o **certificado digital A1** da empresa; ela entra na V2. Este documento descreve o caminho. Confirme detalhes de legislação e prazos com o contador e com as notas técnicas vigentes do Portal Nacional da NF-e.
 
 ## Por que não dá para fazer só no navegador
 
 1. Os web services da SEFAZ exigem **TLS mútuo**: a conexão é autenticada com o certificado digital (e-CNPJ) da empresa.
-2. Os serviços são SOAP/XML **sem CORS** — o navegador bloqueia a chamada.
+2. Os serviços são SOAP/XML **sem CORS**: o navegador bloqueia a chamada.
 3. O certificado A1 (arquivo `.pfx` + senha) **não pode ficar no navegador**: quem tem o arquivo assina documentos em nome da empresa.
 
 Logo: um **backend** guarda o certificado criptografado e conversa com a SEFAZ; o Prumo (frontend) conversa com esse backend.
@@ -31,7 +31,7 @@ Para ligar a integração real basta uma nova implementação de `ProvedorSefaz`
 | Situação de uma nota | **NFeConsultaProtocolo** (SEFAZ autorizadora da UF) | Confere se está autorizada/cancelada antes de pagar. |
 | Notas de serviço (NFS-e) | **NFS-e padrão nacional** (ADN / Emissor Nacional) | API REST própria; entra na V3. |
 
-## Caminho A — backend próprio com certificado A1
+## Caminho A: backend próprio com certificado A1
 
 ```
 Prumo (navegador) ──HTTPS──▶ API Prumo ──TLS mútuo (A1)──▶ SEFAZ / Ambiente Nacional
@@ -51,7 +51,7 @@ Bibliotecas úteis em Node: assinatura XML (xml-crypto), leitura de PFX (node-fo
 
 **Prós:** custo marginal baixo, controle total. **Contras:** mais código para manter, acompanhar notas técnicas.
 
-## Caminho B — provedor de API fiscal
+## Caminho B: provedor de API fiscal
 
 Serviços como **Nuvem Fiscal, Focus NFe, PlugNotas (TecnoSpeed), NFE.io** e similares oferecem REST pronto para distribuição DF-e, manifestação, consulta e NFS-e. O certificado é enviado ao provedor.
 
@@ -63,5 +63,5 @@ Serviços como **Nuvem Fiscal, Focus NFe, PlugNotas (TecnoSpeed), NFE.io** e sim
 
 - Ambientes separados: **homologação** para testes, **produção** para valer (a configuração já existe em `configSefaz.ambiente`).
 - Guardar o **XML original** (é o documento fiscal; o DANFE é só a representação).
-- Trilha de auditoria de cada manifestação (quem, quando, qual evento) — o Prumo já registra atividades.
+- Trilha de auditoria de cada manifestação (quem, quando, qual evento); o Prumo já registra atividades.
 - Reforma tributária: as NF-e passam a trazer campos de IBS/CBS; o leitor deve preservá-los e o DRE pode exibi-los.

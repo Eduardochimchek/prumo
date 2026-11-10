@@ -44,7 +44,7 @@ export function ImportarNotas({ aberta, aoFechar, aoConcluir }: { aberta: boolea
     const novos: Item[] = [];
     for (const f of Array.from(arquivos)) {
       if (!/\.xml$/i.test(f.name)) {
-        novos.push({ arquivo: f.name, erro: 'Não é um arquivo .xml (o PDF do DANFE não serve — precisa do XML).', gerar: false, categoriaId: '' });
+        novos.push({ arquivo: f.name, erro: 'Não é um arquivo .xml (o PDF do DANFE não serve, precisa do XML).', gerar: false, categoriaId: '' });
         continue;
       }
       try {

@@ -317,11 +317,11 @@ function ContasTipo({ tipo }: { tipo: TipoLancamento }) {
                     <span role="cell" className="livro__desc">
                       <strong>{l.descricao}</strong>
                       <span>
-                        {[c ? c.fantasia || c.nome : FORMAS.find((f) => f.valor === l.forma)?.rotulo, l.documento].filter(Boolean).join(' · ') || '—'}
+                        {[c ? c.fantasia || c.nome : FORMAS.find((f) => f.valor === l.forma)?.rotulo, l.documento].filter(Boolean).join(' · ') || '-'}
                       </span>
                     </span>
                     <span role="cell" className="livro__cat">
-                      {idx.categorias.get(l.categoriaId ?? '')?.nome ?? '—'}
+                      {idx.categorias.get(l.categoriaId ?? '')?.nome ?? '-'}
                     </span>
                     <span role="cell" className="livro__status">
                       <Carimbo status={st} tipo={tipo} />

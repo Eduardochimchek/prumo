@@ -1,4 +1,4 @@
-// Avisos (toasts) com ação opcional — o "Desfazer" depois de uma baixa, por exemplo.
+// Avisos (toasts) com ação opcional, o "Desfazer" depois de uma baixa, por exemplo.
 //
 // Detalhe importante: um <dialog> modal deixa todo o resto da página inerte (sem clique).
 // Por isso os avisos são renderizados DENTRO do diálogo aberto mais recente (via portal),

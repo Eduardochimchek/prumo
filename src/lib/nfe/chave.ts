@@ -24,7 +24,7 @@ export const TIPOS_EMISSAO: Record<string, string> = {
   '9': 'Contingência off-line (NFC-e)',
 };
 
-/** Portal nacional da NF-e (consulta pública exige captcha — o usuário cola a chave lá). */
+/** Portal nacional da NF-e (consulta pública exige captcha, o usuário cola a chave lá). */
 export const URL_PORTAL_NFE =
   'https://www.nfe.fazenda.gov.br/portal/consultaRecaptcha.aspx?tipoConsulta=resumo&tipoConteudo=7PhJ+gAVw2g=';
 
@@ -68,7 +68,7 @@ export function analisarChave(entrada: string): ChaveInfo {
       chave,
       completa: false,
       valida: false,
-      erros: [`A chave de acesso tem 44 caracteres — esta tem ${chave.length}.`],
+      erros: [`A chave de acesso tem 44 caracteres, e esta tem ${chave.length}.`],
     };
   }
   const erros: string[] = [];

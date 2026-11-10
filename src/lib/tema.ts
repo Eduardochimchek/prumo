@@ -1,4 +1,4 @@
-// Tema claro/escuro/sistema — preferência por aparelho (localStorage).
+// Tema claro/escuro/sistema, preferência por aparelho (localStorage).
 // O index.html aplica o tema antes do React carregar, para não piscar.
 
 import { useEffect, useState } from 'react';

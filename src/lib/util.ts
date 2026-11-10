@@ -4,7 +4,7 @@ export function uid(prefixo = ''): string {
   return prefixo + Date.now().toString(36) + Math.random().toString(36).slice(2, 9);
 }
 
-/** Gerador pseudoaleatório determinístico (mulberry32) — dados de demonstração estáveis. */
+/** Gerador pseudoaleatório determinístico (mulberry32), dados de demonstração estáveis. */
 export function aleatorio(semente: number) {
   let s = semente >>> 0;
   const proximo = () => {

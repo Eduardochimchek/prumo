@@ -1,7 +1,7 @@
 {
-  "name": "Prumo — Gestão financeira",
+  "name": "Prumo · Gestão financeira",
   "short_name": "Prumo",
-  "description": "Contas a pagar e a receber, notas fiscais, fluxo de caixa e equipe — do computador ao celular.",
+  "description": "Contas a pagar e a receber, notas fiscais, fluxo de caixa e equipe, do computador ao celular.",
   "lang": "pt-BR",
   "start_url": "./",
   "scope": "./",

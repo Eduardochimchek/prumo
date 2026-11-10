@@ -257,7 +257,7 @@ export function LancamentoForm({
         <Campo rotulo={tipo === 'pagar' ? 'Fornecedor' : 'Cliente'} htmlFor="f-contato">
           <div style={{ display: 'flex', gap: 8 }}>
             <Selecao id="f-contato" value={contatoId} onChange={(e) => setContatoId(e.target.value)}>
-              <option value="">— sem {tipo === 'pagar' ? 'fornecedor' : 'cliente'} —</option>
+              <option value="">Sem {tipo === 'pagar' ? 'fornecedor' : 'cliente'}</option>
               {contatos.map((c) => (
                 <option key={c.id} value={c.id}>
                   {c.fantasia || c.nome}
@@ -275,7 +275,7 @@ export function LancamentoForm({
 
         <Campo className="c3" rotulo="Categoria" htmlFor="f-cat">
           <Selecao id="f-cat" value={categoriaId} onChange={(e) => setCategoriaId(e.target.value)}>
-            <option value="">— sem categoria —</option>
+            <option value="">Sem categoria</option>
             {categorias.map((c) => (
               <option key={c.id} value={c.id}>
                 {c.nome}
@@ -285,7 +285,7 @@ export function LancamentoForm({
         </Campo>
         <Campo className="c3" rotulo="Forma de pagamento" htmlFor="f-forma">
           <Selecao id="f-forma" value={forma} onChange={(e) => setForma(e.target.value as FormaPagamento)}>
-            <option value="">—</option>
+            <option value="">Não informada</option>
             {FORMAS.map((f) => (
               <option key={f.valor} value={f.valor}>
                 {f.rotulo}

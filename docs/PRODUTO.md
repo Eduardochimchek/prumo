@@ -1,8 +1,8 @@
-# Prumo — visão de produto
+# Prumo: visão de produto
 
 ## Em uma frase
 
-O financeiro da empresa num lugar só, que **avisa antes do problema**: o que vence, o que atrasou e como o caixa vai estar nas próximas semanas — no computador e no celular.
+O financeiro da empresa num lugar só, que **avisa antes do problema**: o que vence, o que atrasou e como o caixa vai estar nas próximas semanas, no computador e no celular.
 
 ## O problema
 
@@ -17,12 +17,12 @@ Em boa parte das pequenas e médias empresas o financeiro vive entre:
 
 | Perfil | O que precisa | Como o Prumo ajuda |
 |---|---|---|
-| **Financeiro / administrativo** (o usuário principal — o perfil do Reginaldo) | Pagar em dia, cobrar, conferir notas, saber o caixa | Painel “Hoje”, baixa em um toque, boleto lido sozinho, XML vira contas |
+| **Financeiro / administrativo** (o usuário principal, perfil do Reginaldo) | Pagar em dia, cobrar, conferir notas, saber o caixa | Painel “Hoje”, baixa em um toque, boleto lido sozinho, XML vira contas |
 | **Dono / diretor** | Saber se a empresa está bem, sem abrir planilha | Manchete do dia, saldo e projeção no celular, DRE gerencial |
 | **Analista / assistente** | Lançar e baixar com segurança | Permissão “Financeiro”, histórico de quem fez o quê, desfazer |
 | **Contador** | Receber os dados organizados | Acesso “Consulta” e planilhas prontas (lançamentos, notas, contatos) |
 
-Segmentos com mais aderência: comércio (varejo e atacado), distribuidoras, prestadores de serviço com notas de compra, construção — empresas de 3 a 100 funcionários, do Simples Nacional ao Lucro Presumido.
+Segmentos com mais aderência: comércio (varejo e atacado), distribuidoras, prestadores de serviço com notas de compra, construção. Empresas de 3 a 100 funcionários, do Simples Nacional ao Lucro Presumido.
 
 ## Escopo da V1 (entregue)
 
@@ -40,14 +40,14 @@ Ver a lista completa no [README](../README.md#o-que-a-v1-já-faz). Em resumo: pa
 
 ## Roadmap
 
-### V2 — a equipe usando de verdade
+### V2: a equipe usando de verdade
 - Backend + banco de dados na nuvem; login seguro; dados compartilhados entre usuários e aparelhos; **multiempresa** (escritórios que atendem várias empresas).
 - **SEFAZ real** com certificado A1: notas emitidas contra o CNPJ chegam sozinhas, manifestação, situação da nota, XML guardado e DANFE em PDF.
 - **Conciliação bancária** (OFX/CNAB) e transferências entre contas.
 - Cobrança: lembretes automáticos (e-mail/WhatsApp), boleto e PIX via banco.
 - Anexos (comprovantes, boletos em PDF) nos títulos.
 
-### V3 — produto
+### V3: produto
 - Assinatura e planos, onboarding guiado, importação de planilhas.
 - Centros de custo, orçamento × realizado, aprovação de pagamentos por alçada.
 - NFS-e (padrão nacional), campos de IBS/CBS da reforma tributária.
@@ -69,4 +69,4 @@ Ver a lista completa no [README](../README.md#o-que-a-v1-já-faz). Em resumo: pa
 
 ## Nome
 
-**Prumo** — “pôr a empresa no prumo”. Antes de lançar comercialmente: busca no INPI (classes 9 e 42), domínio (.com.br / .app) e redes sociais. Alternativas: Lastro, Tino, Fecho.
+**Prumo**: “pôr a empresa no prumo”. Antes de lançar comercialmente: busca no INPI (classes 9 e 42), domínio (.com.br / .app) e redes sociais. Alternativas: Lastro, Tino, Fecho.

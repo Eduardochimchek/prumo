@@ -175,7 +175,7 @@ function AbaContas() {
             </Campo>
             <Campo className="c3" rotulo="Banco" htmlFor="cb-banco">
               <Selecao id="cb-banco" value={form.bancoCodigo ?? ''} onChange={(e) => setForm({ ...form, bancoCodigo: e.target.value || undefined })}>
-                <option value="">— nenhum —</option>
+                <option value="">Nenhum</option>
                 {BANCOS.map((b) => (
                   <option key={b.codigo} value={b.codigo}>
                     {b.codigo} · {b.nome}
@@ -245,7 +245,7 @@ function AbaCategorias() {
                         icone="lixeira"
                         aria-label={`Excluir ${c.nome}`}
                         disabled={n > 0}
-                        title={n > 0 ? 'Em uso — não pode ser excluída' : 'Excluir'}
+                        title={n > 0 ? 'Em uso, não pode ser excluída' : 'Excluir'}
                         onClick={() => {
                           try {
                             excluirCategoria(c.id, usuario.id);
@@ -312,7 +312,7 @@ function AbaSefaz() {
           <strong>Busca as notas emitidas contra o seu CNPJ</strong> direto na SEFAZ (Distribuição DF-e), sem depender do fornecedor mandar o XML.
         </li>
         <li>
-          <strong>Manifesta o destinatário</strong> (ciência, confirmação, desconhecimento) — protege a empresa de notas frias no seu nome.
+          <strong>Manifesta o destinatário</strong> (ciência, confirmação, desconhecimento), que protege a empresa de notas frias no seu nome.
         </li>
         <li>
           <strong>Gera as contas a pagar</strong> pelas duplicatas de cada nota, com o fornecedor já cadastrado.

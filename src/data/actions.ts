@@ -380,7 +380,7 @@ export function excluirNota(notaId: string, usuarioId: string): void {
   });
 }
 
-// ---------- SEFAZ (manifestação do destinatário — simulada na V1) ----------
+// ---------- SEFAZ (manifestação do destinatário, simulada na V1) ----------
 
 export function registrarManifestacao(resumoId: string, evento: Manifestacao, usuarioId: string): void {
   const nomes: Record<Manifestacao, string> = {

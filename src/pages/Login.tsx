@@ -45,7 +45,7 @@ export function Login() {
             <br />
             no prumo.
           </h1>
-          <p>Contas a pagar e a receber, notas fiscais, fluxo de caixa e a equipe — num lugar só, do computador ao celular.</p>
+          <p>Contas a pagar e a receber, notas fiscais, fluxo de caixa e a equipe num lugar só, do computador ao celular.</p>
         </div>
         <ul className="login__fatos">
           <li>NF-e por XML · SEFAZ</li>

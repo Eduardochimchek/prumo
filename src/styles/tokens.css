@@ -1,5 +1,5 @@
 /* =====================================================================
-   PRUMO — tokens do design system "Papel & Tinta"
+   PRUMO, tokens do design system "Papel & Tinta"
    Cor é informação, não decoração: a marca é tinta sobre papel; as cores
    só aparecem quando significam algo (entrada, saída, status, hoje).
    Pares de dados validados para daltonismo (protan/deutan) no claro e no escuro.
@@ -32,7 +32,7 @@
   --entrada-suave: color-mix(in oklab, var(--entrada) 34%, var(--folha));
   --saida-suave: color-mix(in oklab, var(--saida) 34%, var(--folha));
 
-  /* status (sempre com rótulo — nunca só a cor) */
+  /* status (sempre com rótulo, nunca só a cor) */
   --ok: #146c43;
   --ok-fundo: #e3efe6;
   --critico: #b42318;
@@ -43,7 +43,7 @@
 
   /* acentos */
   --latao: #a87628;          /* marca (o prumo) e o marcador de "hoje" */
-  --caneta: #2546b5;         /* links e foco — azul de caneta esferográfica */
+  --caneta: #2546b5;         /* links e foco, azul de caneta esferográfica */
   --foco: color-mix(in oklab, var(--caneta) 30%, transparent);
 
   --sombra-camada: 0 28px 70px -20px rgb(23 21 15 / 0.32), 0 2px 8px rgb(23 21 15 / 0.08);

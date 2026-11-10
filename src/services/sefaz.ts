@@ -1,4 +1,4 @@
-// Integração com a SEFAZ — camada de serviço.
+// Integração com a SEFAZ, camada de serviço.
 //
 // O navegador NÃO consegue falar direto com a SEFAZ: os web services exigem TLS mútuo com o
 // certificado digital A1 (e-CNPJ) da empresa e não liberam CORS. Por isso a integração real

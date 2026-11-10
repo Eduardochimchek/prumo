@@ -151,8 +151,8 @@ export function ContatoForm({
         <Campo
           rotulo="CNPJ ou CPF"
           htmlFor="c-doc"
-          erro={docInvalido ? 'Documento inválido — confira os dígitos.' : null}
-          dica={cnpjAlfanumerico(docNorm) ? 'CNPJ alfanumérico (novo formato da Receita) — aceito.' : 'Com o CNPJ, buscamos os dados na Receita automaticamente.'}
+          erro={docInvalido ? 'Documento inválido. Confira os dígitos.' : null}
+          dica={cnpjAlfanumerico(docNorm) ? 'CNPJ alfanumérico (novo formato da Receita), aceito.' : 'Com o CNPJ, buscamos os dados na Receita automaticamente.'}
         >
           <div style={{ display: 'flex', gap: 8 }}>
             <Entrada
@@ -203,7 +203,7 @@ export function ContatoForm({
         </Campo>
         <Campo className="c2 m3" rotulo="UF" htmlFor="c-uf">
           <Selecao id="c-uf" value={uf} onChange={(e) => setUf(e.target.value)}>
-            <option value="">—</option>
+            <option value="">UF</option>
             {UFS.map((u) => (
               <option key={u.sigla} value={u.sigla}>
                 {u.sigla}

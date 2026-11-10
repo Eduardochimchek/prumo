@@ -79,13 +79,13 @@ function FichaContato({ contato, aoFechar }: { contato: Contato | null; aoFechar
           <p className="muted">{contato.nome}</p>
           <dl className="lista-definicao" style={{ marginTop: 14 }}>
             <dt>{contato.documento ? tipoDocumento(contato.documento) : 'Documento'}</dt>
-            <dd className="mono">{contato.documento ? mascaraDocumento(contato.documento) : '—'}</dd>
+            <dd className="mono">{contato.documento ? mascaraDocumento(contato.documento) : '-'}</dd>
             <dt>E-mail</dt>
-            <dd>{contato.email ? <a href={`mailto:${contato.email}`}>{contato.email}</a> : '—'}</dd>
+            <dd>{contato.email ? <a href={`mailto:${contato.email}`}>{contato.email}</a> : '-'}</dd>
             <dt>Telefone</dt>
-            <dd>{contato.telefone ? <a href={`tel:${contato.telefone.replace(/\D/g, '')}`}>{contato.telefone}</a> : '—'}</dd>
+            <dd>{contato.telefone ? <a href={`tel:${contato.telefone.replace(/\D/g, '')}`}>{contato.telefone}</a> : '-'}</dd>
             <dt>Cidade</dt>
-            <dd>{[contato.cidade, contato.uf].filter(Boolean).join(' / ') || '—'}</dd>
+            <dd>{[contato.cidade, contato.uf].filter(Boolean).join(' / ') || '-'}</dd>
             {contato.endereco && (
               <>
                 <dt>Endereço</dt>
@@ -252,7 +252,7 @@ export function Contatos() {
       </div>
 
       {lista.length === 0 ? (
-        <Vazio icone="contatos" titulo="Ninguém por aqui" texto={busca ? `Nada encontrado para “${busca}”.` : 'Cadastre clientes e fornecedores — ou importe um XML de nota, que o Prumo cadastra sozinho.'} />
+        <Vazio icone="contatos" titulo="Ninguém por aqui" texto={busca ? `Nada encontrado para “${busca}”.` : 'Cadastre clientes e fornecedores, ou importe um XML de nota, que o Prumo cadastra sozinho.'} />
       ) : (
         <ul className="contatos__grade">
           {lista.map((c) => {

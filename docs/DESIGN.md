@@ -1,13 +1,13 @@
-# Design system — “Papel & Tinta”
+# Design system “Papel & Tinta”
 
-A identidade do Prumo vem do ofício do financeiro: **papel, tinta de caneta, carimbo, livro-razão**. A execução é moderna — tipografia grande, muito respiro, linhas finas no lugar de sombras — para fugir tanto do ERP cinza das antigas quanto do “dashboard genérico de IA”.
+A identidade do Prumo vem do ofício do financeiro: **papel, tinta de caneta, carimbo, livro-razão**. A execução é moderna (tipografia grande, muito respiro, linhas finas no lugar de sombras), para fugir tanto do ERP cinza das antigas quanto do “dashboard genérico de IA”.
 
 ## Princípios
 
 1. **Cor é informação.** A marca é tinta sobre papel. Cor aparece quando significa algo.
 2. **Texto antes de gráfico.** A manchete do dia diz o que importa; gráficos e tabelas detalham.
 3. **Hierarquia por tipografia e linhas**, não por caixas com sombra.
-4. **Status é carimbo** — rótulo em caixa alta, contorno de tinta. O “PAGO” grande tem textura de tinta e entra com animação de carimbada.
+4. **Status é carimbo**: rótulo em caixa alta, contorno de tinta. O “PAGO” grande tem textura de tinta e entra com animação de carimbada.
 5. **Celular é primeira classe.** Navegação no polegar, diálogos que sobem de baixo.
 
 ## Tokens (src/styles/tokens.css)
@@ -37,7 +37,7 @@ A identidade do Prumo vem do ofício do financeiro: **papel, tinta de caneta, ca
 | **Schibsted Grotesk** (variável) | Interface, botões, **todos os números** |
 | **IBM Plex Mono** | Rótulos em caixa alta, chaves de acesso, CNPJ, códigos, carimbos |
 
-Regras: números grandes isolados com algarismos proporcionais; colunas com `tabular-nums` (`.num`). Valores dentro de frases usam a sans com grifo colorido (`.grifo`) — o texto continua na cor da tinta; a cor fica no traço.
+Regras: números grandes isolados com algarismos proporcionais; colunas com `tabular-nums` (`.num`). Valores dentro de frases usam a sans com grifo colorido (`.grifo`); o texto continua na cor da tinta; a cor fica no traço.
 
 ## Componentes principais
 
@@ -65,4 +65,4 @@ Regras: números grandes isolados com algarismos proporcionais; colunas com `tab
 
 ## O que evitamos (e por quê)
 
-Inter, gradientes roxos, glassmorphism, grade de cartões ícone+título+texto, emojis, pílulas pastel, barra lateral genérica e bibliotecas de ícones genéricas: são os sinais mais citados de “interface gerada por IA” e deixam o produto com cara de modelo pronto. Também evitamos o oposto — telas densas e cinzas dos ERPs antigos.
+Inter, gradientes roxos, glassmorphism, grade de cartões ícone+título+texto, emojis, pílulas pastel, barra lateral genérica e bibliotecas de ícones genéricas: são os sinais mais citados de “interface gerada por IA” e deixam o produto com cara de modelo pronto. Também evitamos o oposto, telas densas e cinzas dos ERPs antigos.

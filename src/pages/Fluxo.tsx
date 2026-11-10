@@ -38,7 +38,7 @@ export function Fluxo() {
           <p className="lede">
             Hoje há <strong>{moeda(proj.inicial)}</strong> nas contas. Com o que já está lançado, o saldo chega a <strong>{moeda(ultimo.saldo)}</strong> em {dataBR(ultimo.data)}. O ponto mais
             baixo é <strong className={proj.menor.saldo < 0 ? 'critico-txt' : undefined}>{moeda(proj.menor.saldo)}</strong>, em {diaMes(proj.menor.data)}
-            {proj.menor.saldo < 0 ? ' — o caixa fica negativo: antecipe recebimentos ou renegocie pagamentos.' : '.'}
+            {proj.menor.saldo < 0 ? '. O caixa fica negativo: antecipe recebimentos ou renegocie pagamentos.' : '.'}
           </p>
         </div>
         <div className="pagina-cabeca__acoes">
@@ -88,8 +88,8 @@ export function Fluxo() {
                     <td className="num">
                       {semanaCurta(p.data)}, {dataBR(p.data)}
                     </td>
-                    <td className="valor entrada-txt">{p.entradas ? moeda(p.entradas) : '—'}</td>
-                    <td className="valor saida-txt">{p.saidas ? moeda(p.saidas) : '—'}</td>
+                    <td className="valor entrada-txt">{p.entradas ? moeda(p.entradas) : '-'}</td>
+                    <td className="valor saida-txt">{p.saidas ? moeda(p.saidas) : '-'}</td>
                     <td className={`valor${p.saldo < 0 ? ' critico-txt' : ''}`}>{moeda(p.saldo)}</td>
                   </tr>
                 ))}

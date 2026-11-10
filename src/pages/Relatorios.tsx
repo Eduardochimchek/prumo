@@ -107,7 +107,7 @@ export function Relatorios() {
       <td>{nome}</td>
       {valores.map((v, i) => (
         <td key={i} className="valor">
-          {v ? moeda(v) : '—'}
+          {v ? moeda(v) : '-'}
         </td>
       ))}
       <td className="valor dre__total">{moeda(total)}</td>
@@ -160,7 +160,7 @@ export function Relatorios() {
         {regime === 'caixa'
           ? 'Caixa: conta o que efetivamente foi pago e recebido, no mês da baixa.'
           : 'Competência: conta pelo mês a que a receita ou despesa se refere, pago ou não.'}{' '}
-        Este é um demonstrativo gerencial — não substitui a contabilidade oficial.
+        Este é um demonstrativo gerencial e não substitui a contabilidade oficial.
       </p>
 
       <div className="tabela-rolagem painel">
@@ -200,7 +200,7 @@ export function Relatorios() {
               <td>Margem</td>
               {r.resultado.map((v, i) => (
                 <td key={i} className="valor muted">
-                  {r.totalReceitas[i] ? `${numero((v / r.totalReceitas[i]) * 100, 1)}%` : '—'}
+                  {r.totalReceitas[i] ? `${numero((v / r.totalReceitas[i]) * 100, 1)}%` : '-'}
                 </td>
               ))}
               <td className="valor">{numero(margem, 1)}%</td>

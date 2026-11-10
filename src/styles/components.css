@@ -390,7 +390,7 @@ select.entrada {
   color: var(--latao);
 }
 
-/* carimbo grande, inclinado e com textura de tinta — no detalhe de título quitado */
+/* carimbo grande, inclinado e com textura de tinta, no detalhe de título quitado */
 .carimbo-grande {
   display: inline-flex;
   flex-direction: column;

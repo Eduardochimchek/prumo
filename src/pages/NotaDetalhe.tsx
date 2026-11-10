@@ -1,4 +1,4 @@
-// A nota fiscal por inteiro — um DANFE redesenhado para ser lido, não decifrado.
+// A nota fiscal por inteiro, um DANFE redesenhado para ser lido, não decifrado.
 
 import { useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router';
@@ -77,7 +77,7 @@ export function NotaDetalhe() {
             <CarimboTexto variante={nota.situacao === 'autorizada' ? 'pago' : 'vencido'}>{nota.situacao === 'autorizada' ? 'Autorizada' : nota.situacao}</CarimboTexto>
             <span className="etiqueta etiqueta--borda">{nota.origem === 'sefaz' ? 'Recebida da SEFAZ' : nota.origem === 'xml' ? 'Importada por XML' : 'Lançada à mão'}</span>
             <span className="muted" style={{ fontSize: 13 }}>
-              por {idx.usuarios.get(nota.importadaPor)?.nome ?? '—'} · {tempoRelativo(nota.importadaEm)}
+              por {idx.usuarios.get(nota.importadaPor)?.nome ?? '-'} · {tempoRelativo(nota.importadaEm)}
             </span>
           </div>
         </div>
@@ -109,7 +109,7 @@ export function NotaDetalhe() {
               icone="externo"
               onClick={async () => {
                 await copiarTexto(nota.chave);
-                avisar('Chave copiada — cole no portal da SEFAZ.');
+                avisar('Chave copiada. Cole no portal da SEFAZ.');
                 window.open(URL_PORTAL_NFE, '_blank', 'noopener');
               }}
             >
@@ -238,7 +238,7 @@ export function NotaDetalhe() {
               ))}
             </ul>
           ) : nota.situacao !== 'autorizada' ? (
-            <p className="muted">Nota {nota.situacao} — não gera contas.</p>
+            <p className="muted">Nota {nota.situacao}, não gera contas.</p>
           ) : (
             <div className="aviso-caixa aviso-caixa--atencao" style={{ flexWrap: 'wrap', alignItems: 'center' }}>
               <Icone nome="alerta" />
@@ -246,7 +246,7 @@ export function NotaDetalhe() {
                 Esta nota ainda não virou {entrada ? 'conta a pagar' : 'conta a receber'}.{' '}
                 {nota.duplicatas.length
                   ? `Ela tem ${plural(nota.duplicatas.length, 'duplicata', 'duplicatas')}: ${nota.duplicatas.map((d) => `${dataBR(d.vencimento)} (${moeda(d.valor)})`).join(', ')}.`
-                  : 'Ela não tem duplicatas — será lançada à vista.'}
+                  : 'Ela não tem duplicatas, então será lançada à vista.'}
               </span>
               {pode('lancar') && (
                 <span className="linha-acoes">

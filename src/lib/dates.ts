@@ -99,7 +99,7 @@ const fHora = new Intl.DateTimeFormat('pt-BR', { hour: '2-digit', minute: '2-dig
 const semPonto = (s: string) => s.replace(/\./g, '');
 
 /** 09/11/2026 */
-export const dataBR = (s?: string | null): string => (s ? fCurta.format(parseISO(s)) : '—');
+export const dataBR = (s?: string | null): string => (s ? fCurta.format(parseISO(s)) : '-');
 
 /** 9 nov */
 export const diaMes = (s: ISODate): string => semPonto(fDiaMes.format(parseISO(s))).replace(' de ', ' ');

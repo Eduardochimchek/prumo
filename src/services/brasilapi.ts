@@ -1,4 +1,4 @@
-// Consultas públicas e gratuitas via BrasilAPI (https://brasilapi.com.br) — CORS liberado,
+// Consultas públicas e gratuitas via BrasilAPI (https://brasilapi.com.br), CORS liberado,
 // funciona direto do navegador. CNPJ (dados da Receita Federal) e CEP.
 
 import { mascaraCep, mascaraTelefone, normalizarCnpj, soDigitos } from '../lib/br';

@@ -249,7 +249,7 @@ export function criarBaseDemo(ref: ISODate = hoje()): Database {
     internet: contato('fornecedor', 'Conecta Fibra Telecomunicações Ltda', 'Conecta Fibra', 'Porto Alegre', 'RS', 'conectafibra.net.br'),
     contabil: contato('fornecedor', 'Lima & Bento Contabilidade S/S', 'Lima & Bento', 'Porto Alegre', 'RS', 'limaebento.com.br'),
     posto: contato('fornecedor', 'Posto Avenida Combustíveis Ltda', 'Posto Avenida', 'Porto Alegre', 'RS', ''),
-    // CNPJ alfanumérico (emitido a partir de jul/2026) — mostra que o sistema já suporta o novo formato
+    // CNPJ alfanumérico (emitido a partir de jul/2026), mostra que o sistema já suporta o novo formato
     software: contato('fornecedor', 'NuvemSoft Sistemas Ltda', 'NuvemSoft', 'Florianópolis', 'SC', 'nuvemsoft.app', cnpjDe('R7K2M9QX0001'), 95),
     receita: contato('fornecedor', 'Receita Federal do Brasil', 'DAS · Simples Nacional', 'Brasília', 'DF', '', ''),
   };
@@ -601,7 +601,7 @@ export function criarBaseDemo(ref: ISODate = hoje()): Database {
     lancamentos.filter((l) => l.notaId === vendaCancelar.id).forEach((l) => {
       l.cancelado = true;
       l.baixa = undefined;
-      l.observacoes = 'Venda cancelada pelo cliente — NF-e cancelada na SEFAZ.';
+      l.observacoes = 'Venda cancelada pelo cliente. NF-e cancelada na SEFAZ.';
     });
   }
 

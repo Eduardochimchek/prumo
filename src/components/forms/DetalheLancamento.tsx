@@ -46,7 +46,7 @@ export function DetalheLancamento({
   const conta = l.contaId ? idx.contas.get(l.contaId) : undefined;
   const nota = l.notaId ? idx.notas.get(l.notaId) : undefined;
   const irmas = l.grupoId ? db.lancamentos.filter((x) => x.grupoId === l.grupoId).sort((a, b) => (a.vencimento < b.vencimento ? -1 : 1)) : [];
-  const nome = (uid?: string) => (uid ? idx.usuarios.get(uid)?.nome ?? 'Usuário removido' : '—');
+  const nome = (uid?: string) => (uid ? idx.usuarios.get(uid)?.nome ?? 'Usuário removido' : '-');
   const atraso = status === 'vencido' ? diffDias(hoje(), l.vencimento) : 0;
   const pagar = l.tipo === 'pagar';
 
@@ -108,7 +108,7 @@ export function DetalheLancamento({
               icone="desfazer"
               onClick={() => {
                 estornarBaixa([l.id], usuario.id);
-                avisar('Baixa estornada — o título voltou a ficar em aberto.');
+                avisar('Baixa estornada. O título voltou a ficar em aberto.');
               }}
             >
               Estornar baixa
@@ -151,7 +151,7 @@ export function DetalheLancamento({
 
       <dl className="lista-definicao" style={{ marginTop: 22 }}>
         <dt>{pagar ? 'Fornecedor' : 'Cliente'}</dt>
-        <dd>{contato ? <Link to={`/contatos?id=${contato.id}`}>{contato.fantasia || contato.nome}</Link> : '—'}</dd>
+        <dd>{contato ? <Link to={`/contatos?id=${contato.id}`}>{contato.fantasia || contato.nome}</Link> : '-'}</dd>
         <dt>Vencimento</dt>
         <dd className="num">{dataBR(l.vencimento)}</dd>
         <dt>Emissão</dt>
@@ -159,11 +159,11 @@ export function DetalheLancamento({
         <dt>Competência</dt>
         <dd>{mesLongo(l.competencia)}</dd>
         <dt>Categoria</dt>
-        <dd>{categoria?.nome ?? '—'}</dd>
+        <dd>{categoria?.nome ?? '-'}</dd>
         <dt>{pagar ? 'Pagar pela conta' : 'Receber na conta'}</dt>
-        <dd>{conta?.nome ?? '—'}</dd>
+        <dd>{conta?.nome ?? '-'}</dd>
         <dt>Forma</dt>
-        <dd>{FORMAS.find((f) => f.valor === l.forma)?.rotulo ?? '—'}</dd>
+        <dd>{FORMAS.find((f) => f.valor === l.forma)?.rotulo ?? '-'}</dd>
         {l.documento && (
           <>
             <dt>Documento</dt>
@@ -192,7 +192,7 @@ export function DetalheLancamento({
               icone="copiar"
               onClick={async () => {
                 const ok = await copiarTexto(l.linhaDigitavel ?? '');
-                avisar(ok ? 'Linha digitável copiada — cole no app do banco.' : 'Não foi possível copiar.');
+                avisar(ok ? 'Linha digitável copiada. Cole no app do banco.' : 'Não foi possível copiar.');
               }}
             >
               Copiar
@@ -207,7 +207,7 @@ export function DetalheLancamento({
           <ol className="detalhe__parcelas">
             {irmas.map((p) => (
               <li key={p.id} className={p.id === l.id ? 'atual' : ''}>
-                <span className="num">{p.parcela ? `${p.parcela.n}/${p.parcela.de}` : '—'}</span>
+                <span className="num">{p.parcela ? `${p.parcela.n}/${p.parcela.de}` : '-'}</span>
                 <span className="num">{dataBR(p.vencimento)}</span>
                 <span className="num">{moeda(p.valor)}</span>
                 <Carimbo status={statusDe(p)} tipo={p.tipo} />

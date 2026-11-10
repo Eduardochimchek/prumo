@@ -44,7 +44,7 @@ export function ConsultaChave({ aberta, aoFechar }: { aberta: boolean; aoFechar:
         <div style={{ marginTop: 18 }}>
           <div className={`aviso-caixa ${info.valida ? 'aviso-caixa--ok' : 'aviso-caixa--critico'}`}>
             <Icone nome={info.valida ? 'check' : 'alerta'} />
-            <span>{info.valida ? 'Chave válida — os dígitos conferem.' : info.erros.join(' ')}</span>
+            <span>{info.valida ? 'Chave válida: os dígitos conferem.' : info.erros.join(' ')}</span>
           </div>
           <dl className="lista-definicao" style={{ marginTop: 16 }}>
             <dt>Documento</dt>
@@ -60,9 +60,9 @@ export function ConsultaChave({ aberta, aoFechar }: { aberta: boolean; aoFechar:
               {info.emitente?.tipo} {info.emitente?.formatado}
             </dd>
             <dt>UF de emissão</dt>
-            <dd>{info.uf ? `${info.uf.nome} (${info.uf.sigla})` : '—'}</dd>
+            <dd>{info.uf ? `${info.uf.nome} (${info.uf.sigla})` : '-'}</dd>
             <dt>Mês de emissão</dt>
-            <dd>{info.anoMes ? mesLongo(info.anoMes) : '—'}</dd>
+            <dd>{info.anoMes ? mesLongo(info.anoMes) : '-'}</dd>
             <dt>Tipo de emissão</dt>
             <dd>{info.tipoEmissao?.nome}</dd>
           </dl>
@@ -169,7 +169,7 @@ function CaixaSefaz() {
         <Icone nome="info" />
         <span>
           Aqui chegam as NF-e que <strong>outras empresas emitiram contra o seu CNPJ</strong>. Para baixar o XML completo, a SEFAZ exige a <em>ciência da operação</em>.
-          Depois, confirme (recebeu a mercadoria) ou registre <em>desconhecimento</em> — isso protege a empresa de notas emitidas indevidamente. Nesta versão a consulta é
+          Depois, confirme (recebeu a mercadoria) ou registre <em>desconhecimento</em>. Isso protege a empresa de notas emitidas indevidamente. Nesta versão a consulta é
           simulada; com o certificado A1 ela passa a ser real (ver roadmap).
         </span>
       </div>
@@ -326,7 +326,7 @@ export function Notas() {
             </div>
           </div>
           {lista.length === 0 ? (
-            <Vazio icone="nota" titulo="Nenhuma nota" texto="Importe os XML das notas de compra e venda — o Prumo gera as contas sozinho." />
+            <Vazio icone="nota" titulo="Nenhuma nota" texto="Importe os XML das notas de compra e venda e o Prumo gera as contas sozinho." />
           ) : (
             <div className="tabela-rolagem painel">
               <table className="razao">
@@ -374,7 +374,7 @@ export function Notas() {
                           ) : n.situacao === 'autorizada' ? (
                             <CarimboTexto variante="hoje">Sem contas</CarimboTexto>
                           ) : (
-                            '—'
+                            '-'
                           )}
                         </td>
                         <td className="valor">{moeda(n.totais.nota)}</td>

@@ -1,5 +1,5 @@
 // Conjunto de ícones próprio do Prumo (grade 24, traço 1.6, pontas arredondadas).
-// Desenhados para o produto — não usamos bibliotecas de ícones genéricas.
+// Desenhados para o produto, não usamos bibliotecas de ícones genéricas.
 
 const P: Record<string, string> = {
   hoje: 'M3.5 17h17 M7.5 17a4.5 4.5 0 0 1 9 0 M12 8.5v-2 M6.2 11.2 4.8 9.8 M17.8 11.2l1.4-1.4 M7 20.5h10',

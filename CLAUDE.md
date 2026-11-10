@@ -1,4 +1,4 @@
-# CLAUDE.md — Prumo
+# CLAUDE.md do Prumo
 
 Guia para quem for evoluir este repositório (Claude Code ou pessoa). Leia antes de mexer. Mantenha este arquivo atualizado quando uma regra mudar.
 
@@ -6,7 +6,7 @@ Guia para quem for evoluir este repositório (Claude Code ou pessoa). Leia antes
 
 Sistema **financeiro-administrativo** (não contábil) para pequenas e médias empresas brasileiras. O dono do produto é **Reginaldo Jeronimo** (sem acento), profissional do financeiro administrativo; o repositório é mantido pelo filho dele. A meta é virar um produto vendável.
 
-O usuário típico paga boletos, confere notas de fornecedores, cobra clientes, acompanha o caixa e repassa informação ao contador. **Não é um ERP de estoque nem um sistema contábil** — não fazemos lançamentos de partidas dobradas, SPED, folha de pagamento ou apuração de impostos.
+O usuário típico paga boletos, confere notas de fornecedores, cobra clientes, acompanha o caixa e repassa informação ao contador. **Não é um ERP de estoque nem um sistema contábil**: não fazemos lançamentos de partidas dobradas, SPED, folha de pagamento ou apuração de impostos.
 
 Estado atual: **V1 local-first** (dados no `localStorage` do navegador), publicada como demonstração no GitHub Pages. Próximo grande passo: V2 com backend e SEFAZ real (ver `docs/PRODUTO.md` e `docs/SEFAZ.md`).
 
@@ -20,16 +20,17 @@ npm test             # vitest (unitários)
 npm run build        # typecheck + build de produção em dist/
 npm run smoke        # ponta a ponta no navegador (precisa de build antes)
 npm run screenshots  # capturas em docs/screenshots (precisa de build antes)
-npm run verificar    # typecheck + test + build + smoke — rode antes de cada commit
+npm run verificar    # typecheck + test + build + smoke (rode antes de cada commit
 ```
 
-`smoke` e `screenshots` usam Edge/Chrome instalados via `playwright-core` (`scripts/browser.mjs`). No Git Bash do Windows, argumentos que começam com `/` ou `#/` viram caminhos — use `MSYS_NO_PATHCONV=1`.
+`smoke` e `screenshots` usam Edge/Chrome instalados via `playwright-core` (`scripts/browser.mjs`). No Git Bash do Windows, argumentos que começam com `/` ou `#/` viram caminhos; use `MSYS_NO_PATHCONV=1`.
 
 ## Regras do projeto (obrigatórias)
 
 ### Idioma
 - Interface, mensagens, documentação e commits em **português do Brasil**.
 - Identificadores do código também em português (`lancamento`, `darBaixa`, `contaPara`), seguindo o que já existe. Termos técnicos consagrados podem ficar em inglês (`store`, `hook`, `props`).
+- **Nunca use travessão (—)** em texto nenhum (interface, docs, commits, comentários): o dono acha que dá cara de texto de IA. Use vírgula, dois-pontos, ponto ou parênteses; para campo vazio, `-`.
 - Texto da interface: direto, de gente para gente (“Registrar pagamento”, “Vence hoje”), sem jargão de TI e sem marketing genérico.
 
 ### Domínio
@@ -42,17 +43,17 @@ npm run verificar    # typecheck + test + build + smoke — rode antes de cada c
 - Toda escrita passa por `src/data/actions.ts` (valida regra, grava com `atualizar()`, registra `Atividade`). **Componentes não alteram o banco diretamente.**
 - Leituras derivadas ficam em `src/data/selectors.ts` (puras, sem efeitos). Derive com `useMemo` a partir de `useDb()`.
 - Permissões por papel em `src/auth/auth.tsx` (`pode('lancar' | 'baixar' | 'importar' | 'contatos' | 'usuarios' | 'config')`). Toda ação nova precisa de checagem na UI **e** a regra correspondente documentada.
-- Base de demonstração (`seed.ts`) é **determinística e relativa a hoje**: use só o gerador `aleatorio(semente)`; nada de `Math.random`, `Date.now` em valores, nem `sort(() => random)` (o resultado muda entre navegadores — use `r.embaralhar`). Nomes, CNPJs e valores são fictícios.
+- Base de demonstração (`seed.ts`) é **determinística e relativa a hoje**: use só o gerador `aleatorio(semente)`; nada de `Math.random`, `Date.now` em valores, nem `sort(() => random)` (o resultado muda entre navegadores, use `r.embaralhar`). Nomes, CNPJs e valores são fictícios.
 - Mudou o formato do banco? Incremente `VERSAO_BANCO` em `store.ts` e trate a migração (hoje a versão incompatível recria a demonstração).
 
-### Design (“Papel & Tinta” — ver `docs/DESIGN.md`)
+### Design (“Papel & Tinta”; ver `docs/DESIGN.md`)
 - Use os **tokens** de `src/styles/tokens.css` (`--tinta`, `--folha`, `--entrada`, `--saida`, `--critico`…). Não escreva cores soltas nos componentes.
 - **Cor é informação**: verde = entrada, laranja = saída, vermelho = vencido/erro, âmbar = atenção/vence hoje, latão = marca/hoje. Status sempre com rótulo (carimbo), nunca só cor.
 - Tipografia: **Newsreader** (títulos, manchetes, prosa), **Schibsted Grotesk** (interface e números), **IBM Plex Mono** (códigos, chaves, rótulos em caixa alta). Números grandes isolados: algarismos proporcionais; colunas de tabela: `tabular-nums` (classe `.num`).
 - Proibido (cara de “tela gerada por IA”/ERP antigo): fonte Inter, gradiente roxo/azul, glassmorphism, grade de cartões ícone+título+texto, emojis na interface, barra lateral genérica, pílulas pastel para status, bibliotecas de ícones genéricas (temos `components/Icone.tsx`), Tailwind/shadcn.
 - Gráficos: SVG próprio, **um eixo só**, barras ≤ 24 px com ponta arredondada de 4 px, linhas de 2 px, grade em linha fina sólida, legenda + rótulo direto seletivo, dica no hover/foco e tabela equivalente. Paleta nova de dados? Valide para daltonismo antes.
-- **Mobile é obrigatório**: confira toda tela em 390 px (sem rolagem horizontal da página — grids de uma coluna com `minmax(0, 1fr)`; flex em coluna sem `wrap`). Diálogos viram folha que sobe de baixo.
-- Diálogos usam `<dialog>` nativo via `components/Camada.tsx`. Avisos (toasts) são renderizados dentro do diálogo aberto (senão ficam inertes) — use `useAvisos()`.
+- **Mobile é obrigatório**: confira toda tela em 390 px (sem rolagem horizontal da página, grids de uma coluna com `minmax(0, 1fr)`; flex em coluna sem `wrap`). Diálogos viram folha que sobe de baixo.
+- Diálogos usam `<dialog>` nativo via `components/Camada.tsx`. Avisos (toasts) são renderizados dentro do diálogo aberto (senão ficam inertes); use `useAvisos()`.
 - Tema escuro precisa continuar funcionando (tokens redefinidos em `tokens.css`).
 
 ### Qualidade
@@ -89,8 +90,8 @@ npm run verificar    # typecheck + test + build + smoke — rode antes de cada c
 - **Título / lançamento**: uma conta a pagar ou a receber. **Baixa**: registrar que foi paga/recebida (data, conta, juros, desconto). **Estorno**: desfazer a baixa.
 - **Duplicata**: parcela de cobrança de uma nota (`<dup>`), vira um título. **Competência**: mês a que a despesa/receita se refere (para o DRE).
 - **NF-e** (modelo 55), **NFC-e** (65), **CT-e** (57), **NFS-e** (serviço, municipal/nacional). **DANFE**: a representação impressa da NF-e.
-- **Chave de acesso**: 44 posições — UF, AAMM, CNPJ, modelo, série, número, tipo de emissão, código, DV.
-- **Manifestação do destinatário**: ciência, confirmação, desconhecimento ou operação não realizada — eventos que a empresa registra sobre notas emitidas contra o seu CNPJ. **Distribuição DF-e**: serviço da SEFAZ que entrega essas notas.
+- **Chave de acesso**: 44 posições: UF, AAMM, CNPJ, modelo, série, número, tipo de emissão, código, DV.
+- **Manifestação do destinatário**: ciência, confirmação, desconhecimento ou operação não realizada: eventos que a empresa registra sobre notas emitidas contra o seu CNPJ. **Distribuição DF-e**: serviço da SEFAZ que entrega essas notas.
 - **DAS**: guia do Simples Nacional. **DRE gerencial**: receitas − despesas por categoria, por caixa ou competência.
 - **Linha digitável**: o código numérico do boleto (47 dígitos bancário, 48 arrecadação). **Fator de vencimento**: dias desde 07/10/1997, reiniciado em 1000 no dia 22/02/2025.
 

@@ -5,7 +5,7 @@
 # Prumo
 
 **Sua empresa no prumo.**
-Gestão financeira e administrativa para pequenas e médias empresas: contas a pagar e a receber, notas fiscais (XML e SEFAZ), fluxo de caixa e a equipe — do computador ao celular.
+Gestão financeira e administrativa para pequenas e médias empresas: contas a pagar e a receber, notas fiscais (XML e SEFAZ), fluxo de caixa e a equipe, do computador ao celular.
 
 **[Abrir a demonstração](https://eduardochimchek.github.io/prumo/)** · usuário `admin` / senha `admin123`
 
@@ -34,7 +34,7 @@ Gestão financeira e administrativa para pequenas e médias empresas: contas a p
 
 O Prumo é um sistema financeiro-administrativo pensado para quem toca o dia a dia de uma empresa: o financeiro que paga boletos, confere notas de fornecedores, cobra clientes e precisa saber **hoje** quanto vai ter no caixa daqui a duas semanas.
 
-A proposta é fugir do ERP “das antigas” — menus em árvore, telas cinzas, dez cliques para dar baixa num boleto — e entregar uma ferramenta que se lê como um jornal: a primeira tela é uma **manchete escrita a partir dos seus números** (“Hoje vencem 4 contas a pagar… o dia mais apertado é 12 de novembro”), e cada ação comum está a um toque.
+A proposta é fugir do ERP “das antigas” (menus em árvore, telas cinzas, dez cliques para dar baixa num boleto) e entregar uma ferramenta que se lê como um jornal: a primeira tela é uma **manchete escrita a partir dos seus números** (“Hoje vencem 4 contas a pagar… o dia mais apertado é 12 de novembro”), e cada ação comum está a um toque.
 
 Idealizado por **Reginaldo Jeronimo**, profissional do financeiro administrativo. Esta é a **V1**: completa para demonstrar e validar o produto, com os dados guardados no próprio navegador (veja [limites](#segurança-e-limites-da-v1)).
 
@@ -48,7 +48,7 @@ Idealizado por **Reginaldo Jeronimo**, profissional do financeiro administrativo
 - Atividade da equipe (quem fez o quê) e para onde vai o dinheiro do mês.
 
 **Contas a pagar e a receber**
-- Lançamento com **leitura do boleto**: cole a linha digitável e o Prumo preenche valor, vencimento e banco — conferindo os dígitos verificadores (inclui a regra do fator de vencimento que reiniciou em 22/02/2025).
+- Lançamento com **leitura do boleto**: cole a linha digitável e o Prumo preenche valor, vencimento e banco, conferindo os dígitos verificadores (inclui a regra do fator de vencimento que reiniciou em 22/02/2025).
 - Parcelamento (divide o valor) ou recorrência mensal.
 - Filtros (vencidas, 7 dias, 30 dias, mês, pagas), busca, categoria, **baixa em lote**, juros/desconto, estorno e **“Desfazer”**.
 - Carimbo de “PAGO” no título quitado, histórico completo, parcelas irmãs, nota de origem.
@@ -141,7 +141,7 @@ Todo push na branch `main` roda o CI (tipos, testes, build) e publica a demonstr
 
 **Stack:** React 19 + TypeScript 7 + Vite 8, React Router 8 (HashRouter), CSS próprio com tokens (sem Tailwind e sem kit de componentes), gráficos em SVG feitos à mão, fontes servidas localmente (Fontsource), Vitest + happy-dom, playwright-core para o teste ponta a ponta.
 
-**Local-first na V1.** O banco é um objeto em memória persistido no `localStorage`, com uma interface pequena (`getDb`, `atualizar`, `useDb`). Toda escrita passa por **casos de uso** (`src/data/actions.ts`), que validam as regras e registram a atividade. Na V2, `store.ts` vira um cliente HTTP com a mesma interface — as telas não mudam.
+**Local-first na V1.** O banco é um objeto em memória persistido no `localStorage`, com uma interface pequena (`getDb`, `atualizar`, `useDb`). Toda escrita passa por **casos de uso** (`src/data/actions.ts`), que validam as regras e registram a atividade. Na V2, `store.ts` vira um cliente HTTP com a mesma interface, as telas não mudam.
 
 ```
 src/
@@ -174,12 +174,12 @@ Decisões que valem lembrar:
 
 ## Design: “Papel & Tinta”
 
-A identidade visual nasceu do próprio ofício: papel, tinta de caneta, carimbo e livro-razão — com execução moderna. Princípios:
+A identidade visual nasceu do próprio ofício: papel, tinta de caneta, carimbo e livro-razão, com execução moderna. Princípios:
 
 - **Cor é informação, não decoração.** A marca é tinta sobre papel; cor só aparece quando significa algo: entrada (verde), saída (laranja), vencido (vermelho), atenção (âmbar), hoje (latão). O par entrada/saída foi **validado para daltonismo** (protanopia/deuteranopia) no claro e no escuro.
 - **Tipografia editorial:** Newsreader (serifada) nos títulos e na manchete; Schibsted Grotesk na interface e nos números; IBM Plex Mono para códigos, chaves e rótulos.
 - **Status como carimbo**, não como “pílula” colorida.
-- **Navegação de jornal** no desktop (cabeçalho + seções) e barra inferior com botão central de lançar no celular — nada de barra lateral genérica.
+- **Navegação de jornal** no desktop (cabeçalho + seções) e barra inferior com botão central de lançar no celular. Nada de barra lateral genérica.
 - Gráficos com um eixo só, marcas finas, rótulos diretos e dica ao passar o mouse; tabela equivalente sempre disponível.
 - Ícones desenhados para o produto. Fugimos de propósito dos clichês de interface gerada por IA (fonte Inter, gradiente roxo, cartões com sombra em grade, emojis).
 
@@ -190,7 +190,7 @@ Detalhes em [`docs/DESIGN.md`](docs/DESIGN.md).
 O navegador **não consegue** falar direto com a SEFAZ: os serviços exigem TLS mútuo com o **certificado digital A1** da empresa e não liberam CORS. Por isso:
 
 - **V1 (agora):** importação de XML completa, validação de chave, abertura do portal da SEFAZ e uma **caixa de entrada simulada** que mostra exatamente como o fluxo vai funcionar.
-- **V2:** um backend guarda o certificado A1 com criptografia e usa a **Distribuição DF-e** (Ambiente Nacional) para baixar automaticamente as notas emitidas contra o CNPJ e a **Recepção de Evento** para a manifestação do destinatário — ou, para chegar mais rápido ao mercado, um provedor de API fiscal.
+- **V2:** um backend guarda o certificado A1 com criptografia e usa a **Distribuição DF-e** (Ambiente Nacional) para baixar automaticamente as notas emitidas contra o CNPJ, e a **Recepção de Evento** para a manifestação do destinatário, ou, para chegar mais rápido ao mercado, um provedor de API fiscal.
 
 O plano técnico completo está em [`docs/SEFAZ.md`](docs/SEFAZ.md).
 
@@ -200,22 +200,22 @@ Sendo direto sobre o que esta versão é:
 
 - Os dados ficam **no navegador e no aparelho** de quem usa. Outro computador ou celular começa com a própria base. **Faça backup** em Configurações → Dados.
 - O login é **local**: protege o uso no dia a dia, mas não é segurança de servidor. As senhas são guardadas com hash e sal (SHA-256 iterado), nunca em texto puro.
-- As credenciais de demonstração são públicas — **troque as senhas** antes de usar com dados reais.
+- As credenciais de demonstração são públicas: **troque as senhas** antes de usar com dados reais.
 - A V2 resolve esses pontos com servidor, banco de dados, autenticação de verdade (Argon2id, sessão segura) e dados compartilhados entre a equipe.
 
 ## Roadmap
 
-**V1 — protótipo funcional (esta versão)** ✓
+**V1: protótipo funcional (esta versão)** ✓
 Painel, contas a pagar/receber, boleto, NF-e por XML, caixa SEFAZ simulada, fluxo de caixa, DRE, contatos com CNPJ, usuários e permissões, PWA, tema escuro.
 
-**V2 — uso real pela equipe**
+**V2: uso real pela equipe**
 - Backend (API Node + PostgreSQL), autenticação segura, multiempresa e dados na nuvem.
 - **SEFAZ de verdade**: certificado A1, download automático das NF-e contra o CNPJ, manifestação, consulta de situação.
 - **Conciliação bancária**: importar extrato OFX/CNAB e casar com os títulos; transferências entre contas.
 - Guardar o XML original e gerar o PDF do DANFE.
 - Cobrança: lembrete de vencimento por e-mail/WhatsApp, emissão de boleto e PIX (via banco/gateway).
 
-**V3 — produto vendável**
+**V3: produto vendável**
 - Planos e assinatura, onboarding guiado, importação de planilhas.
 - NFS-e (padrão nacional), centros de custo, orçamento × realizado, aprovação de pagamentos em alçadas.
 - Campos de IBS/CBS da reforma tributária nas notas e relatórios.
@@ -225,17 +225,17 @@ Visão de produto, públicos e ideias de modelo de negócio: [`docs/PRODUTO.md`]
 
 ## Por que “Prumo”
 
-**Prumo** é o fio com um peso de latão que o pedreiro usa para conferir se a parede está reta. “Pôr no prumo” é pôr em ordem — exatamente o que um bom financeiro faz com uma empresa. É curto, fácil de falar e de lembrar, e dá um símbolo forte (o peso do prumo é a marca).
+**Prumo** é o fio com um peso de latão que o pedreiro usa para conferir se a parede está reta. “Pôr no prumo” é pôr em ordem: exatamente o que um bom financeiro faz com uma empresa. É curto, fácil de falar e de lembrar, e dá um símbolo forte (o peso do prumo é a marca).
 
 Na pesquisa feita para a V1, não encontramos software de gestão financeira com esse nome (há a Prumo Logística, de outro setor, e um escritório de BPO financeiro chamado Prumo Finanças). **Antes de vender, faça a busca de marca no INPI** (classes 9 e 42) e a checagem de domínio. Alternativas pensadas: *Lastro*, *Tino*, *Fecho*.
 
 ## Documentação
 
-- [`CLAUDE.md`](CLAUDE.md) — guia para quem (pessoa ou IA) for evoluir o código: regras, domínio, padrões.
-- [`docs/PRODUTO.md`](docs/PRODUTO.md) — visão, públicos, escopo e roadmap.
-- [`docs/DESIGN.md`](docs/DESIGN.md) — design system “Papel & Tinta”.
-- [`docs/SEFAZ.md`](docs/SEFAZ.md) — integração com a SEFAZ e notas fiscais.
+- [`CLAUDE.md`](CLAUDE.md): guia para quem (pessoa ou IA) for evoluir o código: regras, domínio, padrões.
+- [`docs/PRODUTO.md`](docs/PRODUTO.md): visão, públicos, escopo e roadmap.
+- [`docs/DESIGN.md`](docs/DESIGN.md): design system “Papel & Tinta”.
+- [`docs/SEFAZ.md`](docs/SEFAZ.md): integração com a SEFAZ e notas fiscais.
 
 ---
 
-© 2026 Reginaldo Jeronimo. Todos os direitos reservados — veja [`LICENSE`](LICENSE). O código está público para demonstração; isso não concede licença de uso.
+© 2026 Reginaldo Jeronimo. Todos os direitos reservados. Veja [`LICENSE`](LICENSE). O código está público para demonstração; isso não concede licença de uso.

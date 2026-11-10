@@ -1,6 +1,6 @@
 // Fluxo de caixa mensal: entradas sobem, saídas descem a partir da mesma linha de base
 // (a posição já codifica o sentido; a cor reforça). Parte prevista em tom suave.
-// Linha do saldo no fim de cada mês — tracejada onde é projeção. Um único eixo.
+// Linha do saldo no fim de cada mês, tracejada onde é projeção. Um único eixo.
 
 import { useState } from 'react';
 import { eixoCompacto, moeda } from '../../lib/format';

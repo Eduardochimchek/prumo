@@ -1,4 +1,4 @@
-// Marca do Prumo: o fio de prumo — ferramenta que mostra o que está "a prumo", na vertical certa.
+// Marca do Prumo: o fio de prumo, ferramenta que mostra o que está "a prumo", na vertical certa.
 // "Pôr a empresa no prumo" = pôr em ordem. O peso do prumo é feito de latão, daí a cor.
 
 export function MarcaSimbolo({ tam = 22, cor = 'var(--latao)', fio = 'currentColor' }: { tam?: number; cor?: string; fio?: string }) {
@@ -20,7 +20,7 @@ export function Marca({ tam = 22, mostrarNome = true }: { tam?: number; mostrarN
   );
 }
 
-/** Prumo animado: balança e assenta — usado no login e como "carregando". */
+/** Prumo animado: balança e assenta, usado no login e como "carregando". */
 export function PrumoPendulo({ altura = 240 }: { altura?: number }) {
   return (
     <svg className="pendulo" viewBox="0 0 120 300" height={altura} aria-hidden="true">

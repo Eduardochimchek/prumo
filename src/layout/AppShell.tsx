@@ -149,7 +149,7 @@ export function AppShell() {
       <header className="cabecalho nao-imprimir">
         <div className="barra">
           <div className="barra__esq">
-            <NavLink to="/" className="barra__marca" aria-label="Prumo — início">
+            <NavLink to="/" className="barra__marca" aria-label="Prumo, início">
               <Marca />
             </NavLink>
             <span className="barra__empresa" title={`CNPJ ${db.empresa.cnpj}`}>
@@ -196,7 +196,7 @@ export function AppShell() {
 
       {/* ---------- Celular ---------- */}
       <header className="topo-movel nao-imprimir">
-        <NavLink to="/" aria-label="Prumo — início" className="topo-movel__marca">
+        <NavLink to="/" aria-label="Prumo, início" className="topo-movel__marca">
           <MarcaSimbolo tam={22} />
         </NavLink>
         <span className="topo-movel__titulo">{tituloAtual}</span>
