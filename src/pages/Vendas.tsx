@@ -11,6 +11,7 @@ import type { EtapaVenda } from '../data/types';
 import { useAuth } from '../auth/auth';
 import { useAcoes } from '../components/Acoes';
 import { Icone } from '../components/Icone';
+import { Painel } from '../components/Painel';
 import { Botao, CarimboTexto, Entrada, Vazio } from '../components/ui';
 
 const VARIANTE: Record<EtapaVenda, 'aberto' | 'hoje' | 'pago' | 'cancelado'> = { orcamento: 'aberto', pedido: 'hoje', faturada: 'pago', recusada: 'cancelado' };
@@ -56,15 +57,6 @@ export function Vendas() {
         <div className="pagina-cabeca__texto">
           <p className="rotulo">Faturamento</p>
           <h1>Vendas</h1>
-          <p className="lede">
-            Em {mesLongo(mes).split(' de ')[0]}: <strong>{moeda(totalMes)}</strong> faturados em {plural(faturadoMes.length, 'nota', 'notas')}.{' '}
-            {abertos.length > 0 && (
-              <>
-                {plural(abertos.length, 'orçamento espera', 'orçamentos esperam')} resposta (<strong>{moeda(abertos.reduce((a, v) => a + totaisDaVenda(v).total, 0))}</strong>).{' '}
-              </>
-            )}
-            {pedidos.length > 0 && <>{plural(pedidos.length, 'pedido aprovado espera', 'pedidos aprovados esperam')} a nota.</>}
-          </p>
         </div>
         <div className="pagina-cabeca__acoes">
           {pode('lancar') && (
@@ -74,6 +66,43 @@ export function Vendas() {
           )}
         </div>
       </header>
+
+      <Painel
+        rotulo="Resumo das vendas"
+        itens={[
+          {
+            chave: 'faturado',
+            rotulo: `Faturado em ${mesLongo(mes).split(' de ')[0]}`,
+            valor: moeda(totalMes),
+            tom: 'entrada',
+            zerado: !totalMes,
+            destaque: true,
+            nota: plural(faturadoMes.length, 'nota emitida', 'notas emitidas'),
+            aoClicar: () => mudarAba('faturada'),
+            ativo: aba === 'faturada',
+          },
+          {
+            chave: 'orcamentos',
+            rotulo: 'Orçamentos em aberto',
+            valor: moeda(abertos.reduce((a, v) => a + totaisDaVenda(v).total, 0)),
+            tom: 'neutro',
+            zerado: !abertos.length,
+            nota: abertos.length ? `${plural(abertos.length, 'orçamento espera', 'orçamentos esperam')} resposta` : 'nenhum',
+            aoClicar: () => mudarAba('orcamento'),
+            ativo: aba === 'orcamento',
+          },
+          {
+            chave: 'pedidos',
+            rotulo: 'Pedidos sem nota',
+            valor: moeda(pedidos.reduce((a, v) => a + totaisDaVenda(v).total, 0)),
+            tom: 'atencao',
+            zerado: !pedidos.length,
+            nota: pedidos.length ? `${plural(pedidos.length, 'pedido aprovado', 'pedidos aprovados')}` : 'nenhum',
+            aoClicar: () => mudarAba('pedido'),
+            ativo: aba === 'pedido',
+          },
+        ]}
+      />
 
       <ol className="funil-vendas" aria-label="Etapas da venda">
         {(['orcamento', 'pedido', 'faturada'] as const).map((e, i) => (

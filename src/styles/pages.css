@@ -211,70 +211,18 @@
   min-width: 0;
 }
 .hoje__abertura {
-  display: grid;
-  grid-template-columns: minmax(0, 1.65fr) minmax(300px, 1fr);
-  gap: 48px;
-  align-items: start;
-}
-.hoje__manchete h1 {
-  margin: 12px 0 18px;
-  font-size: clamp(42px, 5.6vw, 76px);
-  font-weight: 520;
-  letter-spacing: -0.03em;
-  line-height: 0.98;
-}
-.hoje__lede {
-  max-width: 34em;
-  font-family: var(--fonte-titulo);
-  font-size: clamp(19px, 1.75vw, 23px);
-  line-height: 1.5;
-  color: var(--tinta-2);
-}
-.grifo {
-  background: none;
-  color: var(--tinta);
-  font-family: var(--fonte-ui);
-  font-size: 0.86em;
-  font-weight: 600;
-  font-variant-numeric: lining-nums;
-  white-space: nowrap;
-  padding: 0 1px;
-  box-shadow: inset 0 -0.2em 0 var(--cor-grifo, var(--regua));
-}
-.grifo--entrada {
-  --cor-grifo: color-mix(in oklab, var(--entrada) 30%, transparent);
-}
-.grifo--saida {
-  --cor-grifo: color-mix(in oklab, var(--saida) 34%, transparent);
-}
-.grifo--critico {
-  --cor-grifo: color-mix(in oklab, var(--critico) 30%, transparent);
-}
-.grifo--neutro {
-  --cor-grifo: color-mix(in oklab, var(--latao) 34%, transparent);
-}
-
-.hoje__saldo {
-  padding: 22px 22px 18px;
-  border-radius: var(--raio-g);
-  background: var(--folha);
-  border: 1px solid var(--regua);
-  border-top: 3px solid var(--tinta);
-}
-.hoje__saldo-valor {
-  margin: 8px 0 6px;
-  font-size: clamp(38px, 3.6vw, 50px);
-  font-weight: 640;
-  letter-spacing: -0.03em;
-  line-height: 1;
-}
-.hoje__saldo-sub {
   display: flex;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 4px 6px;
-  font-size: 14px;
-  color: var(--tinta-2);
+  flex-direction: column;
+  gap: 22px;
+}
+.hoje__cabeca {
+  margin-bottom: 0;
+}
+@media (max-width: 640px) {
+  /* no celular os números vêm logo; os atalhos estão no botão + e no próprio painel */
+  .hoje__cabeca .pagina-cabeca__acoes {
+    display: none;
+  }
 }
 .contas-saldo {
   margin: 18px 0 0;
@@ -284,6 +232,11 @@
   display: flex;
   flex-direction: column;
   gap: 13px;
+}
+.contas-saldo--solto {
+  margin: 0;
+  padding: 4px 0 0;
+  border-top: 0;
 }
 .contas-saldo__linha {
   display: flex;
@@ -316,6 +269,9 @@
   display: grid;
   grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr);
   gap: 48px;
+}
+.hoje__atividade {
+  max-width: 760px;
 }
 .hoje__graficos {
   display: grid;
@@ -613,7 +569,6 @@
 }
 
 @media (max-width: 1100px) {
-  .hoje__abertura,
   .hoje__colunas,
   .hoje__graficos {
     grid-template-columns: minmax(0, 1fr);
@@ -623,13 +578,6 @@
 @media (max-width: 1023px) {
   .hoje {
     gap: 34px;
-  }
-  .hoje__manchete h1 {
-    font-size: 44px;
-    margin: 8px 0 12px;
-  }
-  .hoje__lede {
-    font-size: 18.5px;
   }
   .agenda {
     grid-template-columns: repeat(14, 56px);

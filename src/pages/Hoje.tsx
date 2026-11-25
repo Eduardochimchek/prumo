@@ -1,10 +1,11 @@
-// "Hoje": a primeira página do dia. Em vez de uma parede de cartões com números,
-// uma manchete escrita a partir dos dados, o que vence, o que atrasou, como o caixa fecha.
+// "Hoje": a primeira página do dia. Os números que importam vêm primeiro, grandes
+// e com cor (saldo, o que entra e sai hoje, o que venceu, as vendas do mês);
+// logo abaixo, o gráfico dos próximos 14 dias. Texto só onde ajuda.
 
 import { useMemo, useState, type ReactNode } from 'react';
 import { Link, useNavigate } from 'react-router';
-import { addMesesChave, dataBR, dataExtenso, diaMesLongo, diffDias, fimMes, hoje, mesChave, mesLongo, relativoDias, saudacao, tempoRelativo } from '../lib/dates';
-import { extenso, moeda, plural } from '../lib/format';
+import { addMesesChave, dataBR, dataExtenso, diaMes, hoje, mesChave, mesLongo, relativoDias, saudacao, tempoRelativo } from '../lib/dates';
+import { moeda, plural } from '../lib/format';
 import { useDb } from '../data/store';
 import { agenda, briefing, fluxoMensal, indices, nomeContato, porCategoria, saldoConta, statusDe, vendasDoMes } from '../data/selectors';
 import type { Lancamento } from '../data/types';
@@ -14,11 +15,8 @@ import { Agenda } from '../components/charts/Agenda';
 import { GraficoFluxoMensal } from '../components/charts/GraficoFluxoMensal';
 import { BarrasCategoria } from '../components/charts/BarrasCategoria';
 import { Icone } from '../components/Icone';
+import { Painel, type ItemPainel } from '../components/Painel';
 import { Avatar, Botao, Carimbo, CarimboTexto } from '../components/ui';
-
-const Grifo = ({ children, tom }: { children: ReactNode; tom: 'entrada' | 'saida' | 'critico' | 'neutro' }) => (
-  <mark className={`grifo grifo--${tom}`}>{children}</mark>
-);
 
 function LinhaTitulo({
   l,
@@ -158,82 +156,76 @@ export function Hoje() {
   const primeiroNome = usuario.nome.split(' ')[0];
   const dia = dias.find((d) => d.data === diaSel) ?? dias[0];
 
-  // ----- manchete -----
+  // ----- painel de números -----
   const { pagar, receber } = b;
-  const frases: ReactNode[] = [];
-  if (pagar.hoje.qtd && receber.hoje.qtd) {
-    frases.push(
-      <>
-        Hoje {pagar.hoje.qtd === 1 ? 'vence 1 conta' : `vencem ${pagar.hoje.qtd} contas`} a pagar (<Grifo tom="saida">{moeda(pagar.hoje.total)}</Grifo>) e entram{' '}
-        <Grifo tom="entrada">{moeda(receber.hoje.total)}</Grifo> de {plural(receber.hoje.qtd, 'recebimento', 'recebimentos')}.
-      </>,
-    );
-  } else if (pagar.hoje.qtd) {
-    frases.push(
-      <>
-        Hoje {pagar.hoje.qtd === 1 ? 'vence 1 conta' : `vencem ${pagar.hoje.qtd} contas`} a pagar, somando <Grifo tom="saida">{moeda(pagar.hoje.total)}</Grifo>.
-      </>,
-    );
-  } else if (receber.hoje.qtd) {
-    frases.push(
-      <>
-        Hoje entram <Grifo tom="entrada">{moeda(receber.hoje.total)}</Grifo> de {plural(receber.hoje.qtd, 'recebimento', 'recebimentos')}.
-      </>,
-    );
-  } else frases.push(<>Nada vence hoje.</>);
-
-  if (pagar.vencido.qtd || receber.vencido.qtd) {
-    const partesPrefixo = (n: number) => {
-      const inicio = !pagar.vencido.qtd;
-      if (n === 1) return inicio ? 'Um recebimento está atrasado' : 'um recebimento está atrasado';
-      return `${extenso(n, 'm', inicio)} recebimentos estão atrasados`;
-    };
-    const partes: ReactNode[] = [];
-    if (pagar.vencido.qtd)
-      partes.push(
-        <span key="p">
-          {pagar.vencido.qtd === 1 ? 'Uma conta a pagar está vencida' : `${extenso(pagar.vencido.qtd, 'f')} contas a pagar estão vencidas`} (<Grifo tom="critico">{moeda(pagar.vencido.total)}</Grifo>)
-        </span>,
-      );
-    if (receber.vencido.qtd)
-      partes.push(
-        <span key="r">
-          {partesPrefixo(receber.vencido.qtd)} (<Grifo tom="critico">{moeda(receber.vencido.total)}</Grifo>)
-        </span>,
-      );
-    frases.push(
-      <>
-        {partes[0]}
-        {partes[1] ? <> e {partes[1]}</> : null}.
-      </>,
-    );
-  }
-  frases.push(
-    <>
-      Nos próximos 7 dias saem <Grifo tom="saida">{moeda(pagar.semana.total)}</Grifo> e entram <Grifo tom="entrada">{moeda(receber.semana.total)}</Grifo>.
-    </>,
-  );
-  if (vm.notas.length) {
-    frases.push(
-      <>
-        Em {mesLongo(mesChave(ref)).split(' de ')[0]}, as vendas somam <Grifo tom="entrada">{moeda(vm.faturado)}</Grifo> em {plural(vm.notas.length, 'nota', 'notas')}
-        {vm.pedidos.qtd ? <>, e {plural(vm.pedidos.qtd, 'pedido aprovado espera', 'pedidos aprovados esperam')} a nota</> : null}.
-      </>,
-    );
-  }
+  const mesNome = mesLongo(mesChave(ref)).split(' de ')[0];
   const menor = b.projecao.menor;
-  frases.push(
-    <>
-      Se nada mudar, o caixa fecha {mesLongo(mesChave(ref)).split(' de ')[0]} em <Grifo tom="neutro">{moeda(b.saldoFimMes)}</Grifo>
-      {menor.data !== ref ? (
+  const sobe = b.saldoFimMes >= b.saldo;
+  const painel: ItemPainel[] = [
+    {
+      chave: 'saldo',
+      rotulo: 'Saldo em caixa',
+      valor: moeda(b.saldo),
+      valorClasse: 'hoje__saldo-valor',
+      tom: 'marca',
+      destaque: true,
+      para: '/fluxo',
+      nota: (
         <>
-          . O dia mais apertado é {diaMesLongo(menor.data)}, com {moeda(menor.saldo)}.
+          <span>
+            Fim de {mesNome}: <strong>{moeda(b.saldoFimMes)}</strong>
+          </span>
+          <Icone nome={sobe ? 'sobe' : 'desce'} tam={15} className={sobe ? 'entrada-txt' : 'saida-txt'} />
+          {menor.saldo < 0 && <span className="critico-txt">fica negativo em {diaMes(menor.data)}</span>}
         </>
-      ) : (
-        '.'
-      )}
-    </>,
-  );
+      ),
+    },
+    {
+      chave: 'entra',
+      rotulo: 'Entra hoje',
+      valor: moeda(receber.hoje.total),
+      tom: 'entrada',
+      zerado: !receber.hoje.qtd,
+      para: `/contas/receber?de=${ref}&ate=${ref}`,
+      nota: receber.hoje.qtd ? plural(receber.hoje.qtd, 'recebimento', 'recebimentos') : 'nada previsto',
+    },
+    {
+      chave: 'sai',
+      rotulo: 'Sai hoje',
+      valor: moeda(pagar.hoje.total),
+      tom: 'saida',
+      zerado: !pagar.hoje.qtd,
+      para: `/contas/pagar?de=${ref}&ate=${ref}`,
+      nota: pagar.hoje.qtd ? plural(pagar.hoje.qtd, 'conta', 'contas') : 'nada vence',
+    },
+    {
+      chave: 'vencidas',
+      rotulo: 'Contas vencidas',
+      valor: moeda(pagar.vencido.total),
+      tom: 'critico',
+      zerado: !pagar.vencido.qtd,
+      para: '/contas/pagar?periodo=vencidos',
+      nota: pagar.vencido.qtd ? plural(pagar.vencido.qtd, 'conta a pagar', 'contas a pagar') : 'tudo em dia',
+    },
+    {
+      chave: 'atrasados',
+      rotulo: 'Recebimentos atrasados',
+      valor: moeda(receber.vencido.total),
+      tom: 'critico',
+      zerado: !receber.vencido.qtd,
+      para: '/contas/receber?periodo=vencidos',
+      nota: receber.vencido.qtd ? plural(receber.vencido.qtd, 'recebimento', 'recebimentos') : 'ninguém atrasado',
+    },
+    {
+      chave: 'vendas',
+      rotulo: `Vendas em ${mesNome}`,
+      valor: moeda(vm.faturado),
+      tom: 'entrada',
+      zerado: !vm.faturado,
+      para: '/vendas',
+      nota: `${plural(vm.notas.length, 'nota', 'notas')}${vm.pedidos.qtd ? ` · ${vm.pedidos.qtd} sem nota` : ''}`,
+    },
+  ];
 
   // ----- pendências -----
   const pendencias: ReactNode[] = [];
@@ -289,9 +281,6 @@ export function Hoje() {
     );
   }
 
-  const fimDoMes = fimMes(ref);
-  const diasParaFim = diffDias(fimDoMes, ref);
-
   return (
     <div className="hoje">
       {db.demo && (
@@ -302,18 +291,15 @@ export function Hoje() {
           pedidoId={vm.pedidos.lista[0]?.id}
         />
       )}
-      <section className="hoje__abertura">
-        <div className="hoje__manchete surgir">
-          <p className="rotulo">{dataExtenso(ref)}</p>
-          <h1>
-            {saudacao()}, {primeiroNome}.
-          </h1>
-          <p className="hoje__lede">
-            {frases.map((f, i) => (
-              <span key={i}>{f} </span>
-            ))}
-          </p>
-          <div className="linha-acoes" style={{ marginTop: 22 }}>
+      <section className="hoje__abertura surgir" aria-label="Resumo do dia">
+        <header className="pagina-cabeca hoje__cabeca">
+          <div className="pagina-cabeca__texto">
+            <p className="rotulo">{dataExtenso(ref)}</p>
+            <h1>
+              {saudacao()}, {primeiroNome}.
+            </h1>
+          </div>
+          <div className="pagina-cabeca__acoes">
             <Botao variante="primario" icone="pagar" onClick={() => navegar('/contas/pagar?periodo=7d')}>
               Ver o que vence na semana
             </Botao>
@@ -323,35 +309,8 @@ export function Hoje() {
               </Botao>
             )}
           </div>
-        </div>
-
-        <aside className="hoje__saldo surgir-2" aria-label="Saldo em caixa">
-          <span className="rotulo">Saldo em caixa agora</span>
-          <div className="hoje__saldo-valor">{moeda(b.saldo)}</div>
-          <p className="hoje__saldo-sub">
-            Projeção para {dataBR(fimDoMes).slice(0, 5)} ({diasParaFim === 0 ? 'hoje' : `em ${diasParaFim} dias`}):{' '}
-            <strong className="num">{moeda(b.saldoFimMes)}</strong>
-            <Icone nome={b.saldoFimMes >= b.saldo ? 'sobe' : 'desce'} tam={16} className={b.saldoFimMes >= b.saldo ? 'entrada-txt' : 'saida-txt'} />
-          </p>
-          <ul className="contas-saldo">
-            {contas.map(({ c, saldo }) => (
-              <li key={c.id}>
-                <div className="contas-saldo__linha">
-                  <span>
-                    <Icone nome={c.tipo === 'caixa' ? 'dinheiro' : 'banco'} tam={15} /> {c.nome}
-                  </span>
-                  <span className={`num${saldo < 0 ? ' critico-txt' : ''}`}>{moeda(saldo)}</span>
-                </div>
-                <div className="barra-fina" aria-hidden="true">
-                  <span style={{ width: `${(Math.abs(saldo) / maxConta) * 100}%`, background: saldo < 0 ? 'var(--critico)' : undefined }} />
-                </div>
-              </li>
-            ))}
-          </ul>
-          <Link to="/fluxo" className="hoje__saldo-link">
-            Ver projeção dia a dia <Icone nome="avancar" tam={15} />
-          </Link>
-        </aside>
+        </header>
+        <Painel rotulo="Números do dia" itens={painel} />
       </section>
 
       <section className="surgir-3 hoje__agenda">
@@ -481,27 +440,31 @@ export function Hoje() {
             </div>
           )}
         </section>
-        <section>
+        <section aria-label="Saldo por conta">
           <div className="secao-titulo">
-            <h2>Atividade</h2>
-            <span className="muted" style={{ fontSize: 13 }}>
-              quem fez o quê
+            <h2>Saldo por conta</h2>
+            <span className="num" style={{ fontWeight: 600 }}>
+              {moeda(b.saldo)}
             </span>
           </div>
-          <ol className="atividades">
-            {db.atividades.filter((a) => a.tipo !== 'seguranca' && a.tipo !== 'privacidade').slice(0, 7).map((a) => {
-              const u = idx.usuarios.get(a.usuarioId);
-              return (
-                <li key={a.id}>
-                  <Avatar nome={u?.nome ?? '?'} tam="p" />
-                  <span className="atividades__texto">{a.texto}</span>
-                  <time className="atividades__quando" dateTime={a.em}>
-                    {tempoRelativo(a.em)}
-                  </time>
-                </li>
-              );
-            })}
-          </ol>
+          <ul className="contas-saldo contas-saldo--solto">
+            {contas.map(({ c, saldo }) => (
+              <li key={c.id}>
+                <div className="contas-saldo__linha">
+                  <span>
+                    <Icone nome={c.tipo === 'caixa' ? 'dinheiro' : 'banco'} tam={15} /> {c.nome}
+                  </span>
+                  <span className={`num${saldo < 0 ? ' critico-txt' : ''}`}>{moeda(saldo)}</span>
+                </div>
+                <div className="barra-fina" aria-hidden="true">
+                  <span style={{ width: `${(Math.abs(saldo) / maxConta) * 100}%`, background: saldo < 0 ? 'var(--critico)' : undefined }} />
+                </div>
+              </li>
+            ))}
+          </ul>
+          <Link to="/fluxo" className="hoje__saldo-link">
+            Ver projeção dia a dia <Icone nome="avancar" tam={15} />
+          </Link>
         </section>
       </div>
 
@@ -545,6 +508,28 @@ export function Hoje() {
           </Link>
         </section>
       </div>
+      <section className="hoje__atividade">
+        <div className="secao-titulo">
+          <h2>Atividade</h2>
+          <span className="muted" style={{ fontSize: 13 }}>
+            quem fez o quê
+          </span>
+        </div>
+        <ol className="atividades">
+          {db.atividades.filter((a) => a.tipo !== 'seguranca' && a.tipo !== 'privacidade').slice(0, 7).map((a) => {
+            const u = idx.usuarios.get(a.usuarioId);
+            return (
+              <li key={a.id}>
+                <Avatar nome={u?.nome ?? '?'} tam="p" />
+                <span className="atividades__texto">{a.texto}</span>
+                <time className="atividades__quando" dateTime={a.em}>
+                  {tempoRelativo(a.em)}
+                </time>
+              </li>
+            );
+          })}
+        </ol>
+      </section>
     </div>
   );
 }

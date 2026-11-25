@@ -300,6 +300,16 @@ try {
     if (n !== 4) throw new Error(`esperava 4 títulos pagos (3 parcelas, uma dividida no pagamento parcial), achei ${n}`);
   });
 
+  await passo('painel de números leva à lista filtrada', async () => {
+    await p.goto(BASE + '#/');
+    await p.locator('.painel').getByRole('link', { name: 'Contas vencidas' }).click();
+    await p.waitForURL(/contas\/pagar/, { timeout: 3000 });
+    const ligado = async () => (await p.locator('.segmentado button[aria-pressed="true"]').innerText()).trim();
+    if (!(await ligado()).startsWith('Vencidas')) throw new Error(`filtro errado: ${await ligado()}`);
+    await p.locator('.painel').getByRole('button', { name: 'Próximos 7 dias' }).click();
+    if (!(await ligado()).startsWith('7 dias')) throw new Error(`filtro errado: ${await ligado()}`);
+  });
+
   if (erros.length) resultados.push(['falhou', 'erros de JavaScript na página', [...new Set(erros)].join(' | ')]);
   await navegador.close();
 } finally {

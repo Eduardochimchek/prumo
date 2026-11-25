@@ -34,7 +34,7 @@ Gestão financeira e administrativa para pequenas e médias empresas: contas a p
 
 O Prumo é um sistema financeiro-administrativo pensado para quem toca o dia a dia de uma empresa: o financeiro que paga boletos, confere notas de fornecedores, cobra clientes e precisa saber **hoje** quanto vai ter no caixa daqui a duas semanas.
 
-A proposta é fugir do ERP “das antigas” (menus em árvore, telas cinzas, dez cliques para dar baixa num boleto) e entregar uma ferramenta que se lê como um jornal: a primeira tela é uma **manchete escrita a partir dos seus números** (“Hoje vencem 4 contas a pagar… o dia mais apertado é 12 de novembro”), e cada ação comum está a um toque.
+A proposta é fugir do ERP “das antigas” (menus em árvore, telas cinzas, dez cliques para dar baixa num boleto) e entregar uma ferramenta que se entende de relance: a primeira tela mostra **os números do dia em destaque** (saldo, o que entra e sai hoje, o que venceu, as vendas do mês), cada um levando à lista certa, e cada ação comum está a um toque.
 
 Idealizado por **Reginaldo Jeronimo**, profissional do financeiro administrativo. Esta é a **V1**: completa para demonstrar e validar o produto, com os dados guardados no próprio navegador (veja [limites](#segurança-e-limites-da-v1)).
 
@@ -195,7 +195,7 @@ Decisões que valem lembrar:
 A identidade visual nasceu do próprio ofício: papel, tinta de caneta, carimbo e livro-razão, com execução moderna. Princípios:
 
 - **Cor é informação, não decoração.** A marca é tinta sobre papel; cor só aparece quando significa algo: entrada (verde), saída (laranja), vencido (vermelho), atenção (âmbar), hoje (latão). O par entrada/saída foi **validado para daltonismo** (protanopia/deuteranopia) no claro e no escuro.
-- **Tipografia editorial:** Newsreader (serifada) nos títulos e na manchete; Schibsted Grotesk na interface e nos números; IBM Plex Mono para códigos, chaves e rótulos.
+- **Tipografia editorial:** Newsreader (serifada) nos títulos; Schibsted Grotesk na interface e nos números; IBM Plex Mono para códigos, chaves e rótulos.
 - **Status como carimbo**, não como “pílula” colorida.
 - **Navegação de jornal** no desktop (cabeçalho + seções) e barra inferior com botão central de lançar no celular. Nada de barra lateral genérica.
 - Gráficos com um eixo só, marcas finas, rótulos diretos e dica ao passar o mouse; tabela equivalente sempre disponível.

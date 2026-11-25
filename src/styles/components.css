@@ -1160,3 +1160,154 @@ dialog.paleta {
   border-radius: 4px;
   background: var(--tinta-2);
 }
+
+/* ---------- Painel de números ----------
+   Uma faixa só, dividida por réguas finas (não uma grade de cartões).
+   O filete de cima diz o que o número é; o rótulo diz em palavras. */
+.painel {
+  --painel-cols: var(--painel-n, 4);
+  display: grid;
+  grid-template-columns: repeat(var(--painel-cols), minmax(0, 1fr));
+  margin: 0;
+  overflow: hidden;
+  background: var(--folha);
+  border: 1px solid var(--regua);
+  border-radius: var(--raio-g);
+}
+.painel__item {
+  --cor-tom: var(--regua-2);
+  --cor-valor: var(--tinta);
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+  padding: 16px 18px 16px;
+  border-top: 3px solid var(--cor-tom);
+  container-type: inline-size;
+  box-shadow: 1px 0 0 var(--regua), 0 1px 0 var(--regua);
+}
+.painel__item--entrada {
+  --cor-tom: var(--entrada);
+  --cor-valor: var(--entrada);
+}
+.painel__item--saida {
+  --cor-tom: var(--saida);
+  --cor-valor: var(--saida);
+}
+.painel__item--critico {
+  --cor-tom: var(--critico);
+  --cor-valor: var(--critico);
+}
+.painel__item--atencao {
+  --cor-tom: var(--atencao);
+  --cor-valor: var(--atencao);
+}
+.painel__item--marca {
+  --cor-tom: var(--latao);
+}
+.painel__item--neutro {
+  --cor-tom: var(--tinta);
+}
+.painel__item--zerado {
+  --cor-tom: var(--regua);
+  --cor-valor: var(--tinta-3);
+}
+.painel dt,
+.painel dt a,
+.painel dt button {
+  font-family: var(--fonte-mono);
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--tinta-3);
+  text-decoration: none;
+}
+.painel dt button {
+  padding: 0;
+  border: 0;
+  background: none;
+  cursor: pointer;
+  text-align: left;
+}
+.painel dd {
+  margin: 0;
+}
+.painel__valor {
+  font-family: var(--fonte-ui);
+  /* o número acompanha a largura da célula: dinheiro nunca é cortado */
+  font-size: clamp(19px, calc(12.5cqi - 3px), 36px);
+  font-weight: 640;
+  line-height: 1.1;
+  letter-spacing: -0.02em;
+  font-variant-numeric: proportional-nums lining-nums;
+  color: var(--cor-valor);
+  white-space: nowrap;
+}
+.painel__nota {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 2px 6px;
+  font-size: 13px;
+  color: var(--tinta-3);
+}
+.painel__nota strong {
+  color: var(--tinta-2);
+  font-weight: 600;
+  white-space: nowrap;
+}
+/* com 6 números, duas linhas de 3: cada número tem espaço para ser grande */
+.painel--6 {
+  --painel-cols: 3;
+}
+/* o item inteiro é clicável: o link/botão do rótulo cobre a célula */
+.painel__item--clicavel dt a::after,
+.painel__item--clicavel dt button::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+}
+.painel__item--clicavel:hover {
+  background: var(--folha-2);
+}
+.painel__item--clicavel dt a:focus-visible,
+.painel__item--clicavel dt button:focus-visible {
+  outline: none;
+}
+.painel__item--clicavel:has(:focus-visible) {
+  outline: 2px solid var(--caneta);
+  outline-offset: -2px;
+}
+.painel__item--ativo {
+  background: var(--folha-3);
+}
+.painel__item--ativo dt button {
+  color: var(--tinta);
+}
+@media (max-width: 1100px) {
+  .painel {
+    --painel-cols: 3;
+  }
+  .painel--4 {
+    --painel-cols: 2;
+  }
+}
+@media (max-width: 640px) {
+  .painel {
+    --painel-cols: 2;
+  }
+  .painel__item {
+    padding: 13px 14px;
+  }
+  .painel__item--destaque,
+  .painel__item--destaque ~ .painel__item:last-child:nth-child(even),
+  .painel:not(:has(.painel__item--destaque)) > .painel__item:last-child:nth-child(odd) {
+    grid-column: 1 / -1;
+  }
+  /* o que sobra sozinho na última linha ocupa a largura, mas não cresce mais que o destaque */
+  .painel__item:not(.painel__item--destaque) .painel__valor {
+    font-size: min(28px, calc(12.5cqi - 3px));
+  }
+}

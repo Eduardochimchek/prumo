@@ -18,6 +18,7 @@ import { useAcoes } from '../components/Acoes';
 import { useAvisos } from '../components/Avisos';
 import { Camada } from '../components/Camada';
 import { Icone } from '../components/Icone';
+import { Painel } from '../components/Painel';
 import { Botao, CarimboTexto, Entrada, ItemMenu, MenuSuspenso, Vazio } from '../components/ui';
 
 type Aba = 'todas' | 'entrada' | 'saida' | 'sefaz';
@@ -249,6 +250,9 @@ export function Notas() {
   const compras = doMes.filter((n) => n.direcao === 'entrada').reduce((a, n) => a + n.totais.nota, 0);
   const vendas = doMes.filter((n) => n.direcao === 'saida').reduce((a, n) => a + n.totais.nota, 0);
   const pendentesSefaz = db.sefaz.filter((s) => s.manifestacao === 'pendente').length;
+  const nCompras = doMes.filter((n) => n.direcao === 'entrada').length;
+  const nVendas = doMes.filter((n) => n.direcao === 'saida').length;
+  const semConta = db.notas.filter((n) => n.situacao === 'autorizada' && !idx.lancamentosPorNota.has(n.id)).length;
 
   const lista = useMemo(
     () =>
@@ -275,15 +279,6 @@ export function Notas() {
         <div className="pagina-cabeca__texto">
           <p className="rotulo">Notas fiscais eletrônicas</p>
           <h1>Notas fiscais</h1>
-          <p className="lede">
-            Em {mesLongo(mes).split(' de ')[0]}: <strong>{moeda(compras)}</strong> em notas de compra e <strong>{moeda(vendas)}</strong> em notas de venda.
-            {pendentesSefaz > 0 && (
-              <>
-                {' '}
-                {plural(pendentesSefaz, 'nota emitida contra o seu CNPJ espera', 'notas emitidas contra o seu CNPJ esperam')} manifestação.
-              </>
-            )}
-          </p>
         </div>
         <div className="pagina-cabeca__acoes">
           <Botao icone="busca" onClick={() => setConsulta(true)}>
@@ -296,6 +291,50 @@ export function Notas() {
           )}
         </div>
       </header>
+
+      <Painel
+        rotulo="Resumo das notas"
+        itens={[
+          {
+            chave: 'compras',
+            rotulo: `Compras em ${mesLongo(mes).split(' de ')[0]}`,
+            valor: moeda(compras),
+            tom: 'saida',
+            zerado: !compras,
+            nota: plural(nCompras, 'nota de entrada', 'notas de entrada'),
+            aoClicar: () => mudarAba('entrada'),
+            ativo: aba === 'entrada',
+          },
+          {
+            chave: 'vendas',
+            rotulo: `Vendas em ${mesLongo(mes).split(' de ')[0]}`,
+            valor: moeda(vendas),
+            tom: 'entrada',
+            zerado: !vendas,
+            nota: plural(nVendas, 'nota de saída', 'notas de saída'),
+            aoClicar: () => mudarAba('saida'),
+            ativo: aba === 'saida',
+          },
+          {
+            chave: 'sefaz',
+            rotulo: 'Esperando manifestação',
+            valor: pendentesSefaz,
+            tom: 'atencao',
+            zerado: !pendentesSefaz,
+            nota: pendentesSefaz ? 'notas contra o seu CNPJ' : 'nada pendente',
+            aoClicar: () => mudarAba('sefaz'),
+            ativo: aba === 'sefaz',
+          },
+          {
+            chave: 'semconta',
+            rotulo: 'Sem conta gerada',
+            valor: semConta,
+            tom: 'critico',
+            zerado: !semConta,
+            nota: semConta ? plural(semConta, 'nota ainda não virou conta', 'notas ainda não viraram conta') : 'todas viraram conta',
+          },
+        ]}
+      />
 
       <div className="abas" role="tablist" style={{ marginBottom: 20 }}>
         {(

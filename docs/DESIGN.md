@@ -5,7 +5,7 @@ A identidade do Prumo vem do ofício do financeiro: **papel, tinta de caneta, ca
 ## Princípios
 
 1. **Cor é informação.** A marca é tinta sobre papel. Cor aparece quando significa algo.
-2. **Texto antes de gráfico.** A manchete do dia diz o que importa; gráficos e tabelas detalham.
+2. **Número antes de texto.** O que importa aparece como número grande, com rótulo e cor, logo no topo (o painel de números); gráficos e tabelas detalham. Frase longa com valores no meio, não: obriga a ler tudo para achar o número (pedido do Reginaldo, nov/2026).
 3. **Hierarquia por tipografia e linhas**, não por caixas com sombra.
 4. **Status é carimbo**: rótulo em caixa alta, contorno de tinta. O “PAGO” grande tem textura de tinta e entra com animação de carimbada.
 5. **Celular é primeira classe.** Navegação no polegar, diálogos que sobem de baixo.
@@ -33,7 +33,7 @@ A identidade do Prumo vem do ofício do financeiro: **papel, tinta de caneta, ca
 
 | Família | Papel |
 |---|---|
-| **Newsreader** (variável, com tamanho óptico) | Títulos de página, manchete do “Hoje”, prosa (ledes) |
+| **Newsreader** (variável, com tamanho óptico) | Títulos de página e de seção, prosa |
 | **Schibsted Grotesk** (variável) | Interface, botões, **todos os números** |
 | **IBM Plex Mono** | Rótulos em caixa alta, chaves de acesso, CNPJ, códigos, carimbos |
 
@@ -61,7 +61,15 @@ Regras: números grandes isolados com algarismos proporcionais; colunas com `tab
 
 - Desktop: cabeçalho em duas linhas como um jornal (marca, empresa, busca, “Lançar”, conta / seções com contadores). Conteúdo até 1320 px.
 - Celular (< 1024 px): barra superior compacta + navegação inferior (Hoje, Contas, **+**, Notas, Mais).
-- Páginas abrem com **rótulo + título serifado + lede** escrito a partir dos dados.
+- Páginas abrem com **rótulo + título serifado** e, logo abaixo, o **painel de números** (`components/Painel.tsx`).
+
+## Painel de números
+
+- Uma faixa só, dividida por réguas finas (não é grade de cartões soltos com ícone). Cada número tem: rótulo em caixa alta (Plex Mono), valor grande (Schibsted, algarismos proporcionais) e uma nota curta.
+- O filete de cima tem a cor do que o número significa: verde entrada, laranja saída, vermelho vencido, âmbar vence hoje/atenção, latão saldo, tinta neutro. Número zerado fica cinza (cor só quando significa algo).
+- O número sempre leva à lista correspondente: link para outra tela ou filtro da própria tela (o filtro ligado fica marcado).
+- O tamanho do valor acompanha a largura da célula (`cqi`): dinheiro nunca é cortado com reticências.
+- Até 5 números numa linha; 6 viram 3 × 2. No celular, 2 colunas; o destaque (ex.: saldo) ocupa a linha inteira.
 
 ## O que evitamos (e por quê)
 

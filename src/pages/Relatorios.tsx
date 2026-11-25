@@ -1,10 +1,11 @@
 import { useMemo, useState } from 'react';
-import { addMesesChave, dataBR, hoje, mesAbrev, mesChave, mesLongo } from '../lib/dates';
+import { addMesesChave, dataBR, hoje, mesAbrev, mesChave } from '../lib/dates';
 import { moeda, numero } from '../lib/format';
 import { mascaraDocumento } from '../lib/br';
 import { baixarArquivo, gerarCsv } from '../lib/util';
 import { useDb } from '../data/store';
 import { dre, indices, statusDe, type Regime } from '../data/selectors';
+import { Painel } from '../components/Painel';
 import { Botao, Caixa, Segmentado } from '../components/ui';
 import { Icone } from '../components/Icone';
 
@@ -120,10 +121,6 @@ export function Relatorios() {
         <div className="pagina-cabeca__texto">
           <p className="rotulo">Relatórios · DRE gerencial</p>
           <h1>Resultado da empresa</h1>
-          <p className="lede">
-            De {mesLongo(meses[0])} a {mesLongo(meses[meses.length - 1])}{comAtual ? ' (parcial)' : ''}, entraram <strong>{moeda(totalRec)}</strong> e saíram <strong>{moeda(totalDesp)}</strong>: resultado de{' '}
-            <strong className={resultado >= 0 ? 'entrada-txt' : 'critico-txt'}>{moeda(resultado, { sinal: true })}</strong> ({numero(margem, 1)}% do faturamento).
-          </p>
         </div>
         <div className="pagina-cabeca__acoes">
           <Botao icone="imprimir" onClick={() => window.print()} className="nao-imprimir">
@@ -134,6 +131,37 @@ export function Relatorios() {
           </Botao>
         </div>
       </header>
+
+      <Painel
+        rotulo="Resumo do resultado"
+        itens={[
+          {
+            chave: 'entrou',
+            rotulo: 'Entrou',
+            valor: moeda(totalRec),
+            tom: 'entrada',
+            zerado: !totalRec,
+            nota: `${mesAbrev(meses[0])} a ${mesAbrev(meses[meses.length - 1])}${comAtual ? ' (parcial)' : ''}`,
+          },
+          { chave: 'saiu', rotulo: 'Saiu', valor: moeda(totalDesp), tom: 'saida', zerado: !totalDesp, nota: 'despesas do período' },
+          {
+            chave: 'resultado',
+            rotulo: 'Resultado',
+            valor: moeda(resultado, { sinal: true }),
+            tom: resultado >= 0 ? 'entrada' : 'critico',
+            zerado: !resultado,
+            nota: resultado >= 0 ? 'lucro no período' : 'prejuízo no período',
+          },
+          {
+            chave: 'margem',
+            rotulo: 'Margem',
+            valor: `${numero(margem, 1)}%`,
+            tom: margem >= 0 ? 'neutro' : 'critico',
+            zerado: !totalRec,
+            nota: 'do faturamento',
+          },
+        ]}
+      />
 
       <div className="filtros">
         <Segmentado

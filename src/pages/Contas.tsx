@@ -12,6 +12,7 @@ import type { Lancamento, TipoLancamento } from '../data/types';
 import { useAuth } from '../auth/auth';
 import { useAcoes } from '../components/Acoes';
 import { Icone } from '../components/Icone';
+import { Painel } from '../components/Painel';
 import { Botao, Caixa, Carimbo, Entrada, Segmentado, Selecao, Vazio } from '../components/ui';
 import { FORMAS } from '../components/forms/LancamentoForm';
 
@@ -171,23 +172,26 @@ function ContasTipo({ tipo }: { tipo: TipoLancamento }) {
 
   const categorias = db.categorias.filter((c) => c.tipo === (pagar ? 'despesa' : 'receita'));
 
+  const mudarPeriodo = (p: Periodo, diaEscolhido?: string) => {
+    setPeriodo(p);
+    setSelecao(new Set());
+    if (diaEscolhido) {
+      params.set('de', diaEscolhido);
+      params.set('ate', diaEscolhido);
+      setParams(params, { replace: true });
+    } else if (params.get('de')) {
+      params.delete('de');
+      params.delete('ate');
+      setParams(params, { replace: true });
+    }
+  };
+
   return (
     <div className="contas">
       <header className="pagina-cabeca">
         <div className="pagina-cabeca__texto">
           <p className="rotulo">{pagar ? 'Contas a pagar' : 'Contas a receber'}</p>
           <h1>{pagar ? 'A pagar' : 'A receber'}</h1>
-          <p className="lede">
-            Em aberto: <strong>{moeda(resumo.aberto.total)}</strong> em {plural(resumo.aberto.qtd, 'título', 'títulos')}
-            {resumo.vencido.qtd > 0 ? (
-              <>
-                , dos quais <strong className="critico-txt">{moeda(resumo.vencido.total)}</strong> {pagar ? 'já venceram' : 'estão atrasados'}.{' '}
-              </>
-            ) : (
-              <>, nenhum vencido. </>
-            )}
-            {pagar ? 'Pago' : 'Recebido'} este mês: <strong>{moeda(resumo.quitadoMes.total)}</strong>.
-          </p>
         </div>
         <div className="pagina-cabeca__acoes">
           <Botao icone="baixar" onClick={exportar} title="Exporta a lista filtrada para Excel (CSV)">
@@ -201,19 +205,66 @@ function ContasTipo({ tipo }: { tipo: TipoLancamento }) {
         </div>
       </header>
 
+      <Painel
+        rotulo={pagar ? 'Resumo das contas a pagar' : 'Resumo das contas a receber'}
+        className="contas__painel"
+        itens={[
+          {
+            chave: 'aberto',
+            rotulo: 'Em aberto',
+            valor: moeda(resumo.aberto.total),
+            tom: 'neutro',
+            zerado: !resumo.aberto.qtd,
+            nota: plural(resumo.aberto.qtd, 'título', 'títulos'),
+            aoClicar: () => mudarPeriodo('abertos'),
+            ativo: periodo === 'abertos',
+          },
+          {
+            chave: 'vencido',
+            rotulo: pagar ? 'Vencidas' : 'Atrasadas',
+            valor: moeda(resumo.vencido.total),
+            tom: 'critico',
+            zerado: !resumo.vencido.qtd,
+            nota: resumo.vencido.qtd ? plural(resumo.vencido.qtd, 'título', 'títulos') : 'nenhum',
+            aoClicar: () => mudarPeriodo('vencidos'),
+            ativo: periodo === 'vencidos',
+          },
+          {
+            chave: 'hoje',
+            rotulo: 'Vence hoje',
+            valor: moeda(resumo.hoje.total),
+            tom: 'atencao',
+            zerado: !resumo.hoje.qtd,
+            nota: resumo.hoje.qtd ? plural(resumo.hoje.qtd, 'título', 'títulos') : 'nada hoje',
+            aoClicar: () => mudarPeriodo('dia', ref),
+            ativo: periodo === 'dia' && dia === ref,
+          },
+          {
+            chave: 'semana',
+            rotulo: 'Próximos 7 dias',
+            valor: moeda(resumo.semana.total),
+            tom: pagar ? 'saida' : 'entrada',
+            zerado: !resumo.semana.qtd,
+            nota: resumo.semana.qtd ? plural(resumo.semana.qtd, 'título', 'títulos') : 'nada previsto',
+            aoClicar: () => mudarPeriodo('7d'),
+            ativo: periodo === '7d',
+          },
+          {
+            chave: 'quitado',
+            rotulo: pagar ? 'Pago este mês' : 'Recebido este mês',
+            valor: moeda(resumo.quitadoMes.total),
+            tom: pagar ? 'saida' : 'entrada',
+            zerado: !resumo.quitadoMes.qtd,
+            nota: plural(resumo.quitadoMes.qtd, 'baixa', 'baixas'),
+          },
+        ]}
+      />
+
       <div className="filtros">
         <Segmentado
           rotulo="Período"
           valor={periodo}
-          aoMudar={(p) => {
-            setPeriodo(p);
-            setSelecao(new Set());
-            if (params.get('de')) {
-              params.delete('de');
-              params.delete('ate');
-              setParams(params, { replace: true });
-            }
-          }}
+          aoMudar={(p) => mudarPeriodo(p)}
           opcoes={[
             ...(periodo === 'dia' && dia ? [{ valor: 'dia' as Periodo, rotulo: `Dia ${dataBR(dia).slice(0, 5)}` }] : []),
             { valor: 'vencidos', rotulo: pagar ? 'Vencidas' : 'Atrasadas', contagem: contagens.vencidos },

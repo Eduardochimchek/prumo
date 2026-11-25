@@ -6,6 +6,7 @@ import { useDb } from '../data/store';
 import { fluxoMensal, projecaoDiaria } from '../data/selectors';
 import { GraficoProjecao } from '../components/charts/GraficoProjecao';
 import { GraficoFluxoMensal } from '../components/charts/GraficoFluxoMensal';
+import { Painel } from '../components/Painel';
 import { Botao, Segmentado } from '../components/ui';
 
 export function Fluxo() {
@@ -17,6 +18,9 @@ export function Fluxo() {
   const meses = useMemo(() => fluxoMensal(db, 6, 2, ref), [db, ref]);
   const ultimo = proj.pontos[proj.pontos.length - 1];
   const diasComMovimento = proj.pontos.filter((p) => p.entradas || p.saidas);
+  const entramNoPeriodo = proj.pontos.reduce((a, p) => a + p.entradas, 0);
+  const saemNoPeriodo = proj.pontos.reduce((a, p) => a + p.saidas, 0);
+  const negativo = proj.menor.saldo < 0;
 
   const exportar = () => {
     const linhas = [
@@ -35,11 +39,6 @@ export function Fluxo() {
         <div className="pagina-cabeca__texto">
           <p className="rotulo">Fluxo de caixa</p>
           <h1>Para onde o caixa vai</h1>
-          <p className="lede">
-            Hoje há <strong>{moeda(proj.inicial)}</strong> nas contas. Com o que já está lançado, o saldo chega a <strong>{moeda(ultimo.saldo)}</strong> em {dataBR(ultimo.data)}. O ponto mais
-            baixo é <strong className={proj.menor.saldo < 0 ? 'critico-txt' : undefined}>{moeda(proj.menor.saldo)}</strong>, em {diaMes(proj.menor.data)}
-            {proj.menor.saldo < 0 ? '. O caixa fica negativo: antecipe recebimentos ou renegocie pagamentos.' : '.'}
-          </p>
         </div>
         <div className="pagina-cabeca__acoes">
           <Botao icone="baixar" onClick={exportar}>
@@ -47,6 +46,48 @@ export function Fluxo() {
           </Botao>
         </div>
       </header>
+
+      <Painel
+        rotulo="Resumo do fluxo de caixa"
+        itens={[
+          { chave: 'hoje', rotulo: 'Saldo hoje', valor: moeda(proj.inicial), tom: 'marca', destaque: true, nota: 'em todas as contas' },
+          {
+            chave: 'entram',
+            rotulo: `Entram em ${horizonte} dias`,
+            valor: moeda(entramNoPeriodo),
+            tom: 'entrada',
+            zerado: !entramNoPeriodo,
+            nota: 'a receber já lançado',
+          },
+          {
+            chave: 'saem',
+            rotulo: `Saem em ${horizonte} dias`,
+            valor: moeda(saemNoPeriodo),
+            tom: 'saida',
+            zerado: !saemNoPeriodo,
+            nota: 'a pagar já lançado',
+          },
+          {
+            chave: 'fim',
+            rotulo: `Saldo em ${dataBR(ultimo.data).slice(0, 5)}`,
+            valor: moeda(ultimo.saldo),
+            tom: ultimo.saldo < 0 ? 'critico' : 'neutro',
+            nota: ultimo.saldo >= proj.inicial ? 'maior que hoje' : 'menor que hoje',
+          },
+          {
+            chave: 'menor',
+            rotulo: 'Ponto mais baixo',
+            valor: moeda(proj.menor.saldo),
+            tom: negativo ? 'critico' : 'neutro',
+            nota: negativo ? `fica negativo em ${diaMes(proj.menor.data)}` : `em ${diaMes(proj.menor.data)}`,
+          },
+        ]}
+      />
+      {negativo && (
+        <p className="aviso-caixa aviso-caixa--critico" style={{ marginBottom: 24 }}>
+          O caixa fica negativo em {diaMes(proj.menor.data)}: antecipe recebimentos ou renegocie pagamentos.
+        </p>
+      )}
 
       <section>
         <div className="secao-titulo">
