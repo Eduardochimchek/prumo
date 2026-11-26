@@ -170,13 +170,21 @@ export function rotaInicial(u: Pick<Usuario, 'papel' | 'modulos'>): string {
  * Módulo a destacar no menu para a rota atual. Rotas que servem a mais de um módulo
  * (Contatos, Vendas, Relatórios) ficam no módulo em que a pessoa já estava.
  */
-export function moduloDaRota(u: Pick<Usuario, 'papel' | 'modulos'>, caminho: string, busca: string, anterior: Modulo | null): Modulo | null {
+export function moduloDaRota(
+  u: Pick<Usuario, 'papel' | 'modulos'>,
+  caminho: string,
+  busca: string,
+  anterior: Modulo | null,
+  /** o módulo veio do clique numa aba ou num item do menu (vale mais que o ?m= do endereço) */
+  escolhido = false,
+): Modulo | null {
   const meus = modulosDo(u);
-  const pedido = new URLSearchParams(busca).get('m') as Modulo | null;
-  if (pedido && meus.includes(pedido) && caminho === '/relatorios') return pedido;
   const dono = donoDaRota(caminho);
   if (dono === 'inicio') return null;
   const candidatos = dono === 'livre' ? meus : dono.filter((m) => meus.includes(m));
+  if (escolhido && anterior && candidatos.includes(anterior)) return anterior;
+  const pedido = new URLSearchParams(busca).get('m') as Modulo | null;
+  if (pedido && meus.includes(pedido) && caminho === '/relatorios') return pedido;
   if (anterior && candidatos.includes(anterior)) return anterior;
   // "Pedidos sem nota" é a fila do Faturamento
   if (caminho === '/vendas' && new URLSearchParams(busca).get('aba') === 'pedido' && candidatos.includes('faturamento')) return 'faturamento';

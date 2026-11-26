@@ -67,8 +67,8 @@ export function VendaDetalhe() {
 
   return (
     <div className="venda">
-      <Link to="/vendas" className="voltar nao-imprimir">
-        <Icone nome="voltar" tam={16} /> Vendas
+      <Link to={v.etapa === 'pedido' ? '/vendas?aba=pedido' : v.etapa === 'faturada' ? '/vendas?aba=faturada' : '/vendas'} className="voltar nao-imprimir">
+        <Icone nome="voltar" tam={16} /> {v.etapa === 'pedido' ? 'Pedidos' : 'Vendas'}
       </Link>
 
       <ol className="trilha-venda nao-imprimir" aria-label="Andamento da venda">

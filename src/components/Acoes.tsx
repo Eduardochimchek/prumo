@@ -107,8 +107,12 @@ export function ProvedorAcoes({ children }: { children: ReactNode }) {
   );
 
   // Mudou de página (ex.: clicou no link do fornecedor dentro do detalhe)? Fecha as camadas.
+  // Feito durante a renderização (e não num efeito) para acontecer ANTES dos efeitos da tela nova:
+  // assim um link como /contas/pagar?id=… (busca rápida) consegue abrir o detalhe ao chegar.
   const { pathname } = useLocation();
-  useEffect(() => {
+  const [paginaAnterior, setPaginaAnterior] = useState(pathname);
+  if (pathname !== paginaAnterior) {
+    setPaginaAnterior(pathname);
     setDetalhe(null);
     setForm(null);
     setBaixa(null);
@@ -118,7 +122,7 @@ export function ProvedorAcoes({ children }: { children: ReactNode }) {
     setCobranca(null);
     setWhatsapp(null);
     setPlanilha(false);
-  }, [pathname]);
+  }
 
   // Atalhos: Ctrl+K / ⌘K e "/" abrem a paleta
   useEffect(() => {

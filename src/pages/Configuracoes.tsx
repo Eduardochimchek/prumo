@@ -818,7 +818,7 @@ export function Configuracoes() {
       {aba === 'empresa' && (
         <>
           <AbaEmpresa />
-          <AbaAprovacao />
+          {podeAbrir(usuario, '/contas') && <AbaAprovacao />}
         </>
       )}
       {aba === 'contas' && <AbaContas />}

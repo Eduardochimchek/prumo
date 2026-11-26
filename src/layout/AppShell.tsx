@@ -102,18 +102,17 @@ export function AppShell() {
   const liberado = podeAbrir(usuario, local.pathname);
 
   // módulo aberto: vem da rota; telas comuns a vários módulos (Contatos, Vendas, Relatórios) ficam no último
+  // o clique numa aba leva o módulo junto com a navegação (no state do histórico): assim a troca de módulo e a
+  // de endereço chegam juntas, e voltar/avançar no navegador devolve o módulo de cada tela
   const [ultimoModulo, setUltimoModulo] = useState<Modulo | null>(lerModulo);
-  const moduloAtual = moduloDaRota(usuario, local.pathname, local.search, ultimoModulo);
+  const pedidoPeloLink = (local.state as { modulo?: Modulo } | null)?.modulo ?? null;
+  const moduloAtual = moduloDaRota(usuario, local.pathname, local.search, pedidoPeloLink ?? ultimoModulo, pedidoPeloLink !== null);
   useEffect(() => {
     if (moduloAtual && moduloAtual !== ultimoModulo) {
       setUltimoModulo(moduloAtual);
       gravarModulo(moduloAtual);
     }
   }, [moduloAtual, ultimoModulo]);
-  const escolherModulo = (m: Modulo) => {
-    setUltimoModulo(m);
-    gravarModulo(m);
-  };
 
   const pedidos = db.vendas.filter((v) => v.etapa === 'pedido').length || undefined;
   const contagens: Record<string, Pick<ItemNav, 'contagem' | 'alerta'>> = {
@@ -139,9 +138,13 @@ export function AppShell() {
 
   const podeLancarAlgo = pode('vender') || pode('lancar') || pode('importar') || pode('planilha');
   // barra de baixo do celular: Início (se houver) e as primeiras telas do módulo aberto
+  const vagas = podeLancarAlgo ? 3 : 4;
+  const doModulo = (moduloAtual ? itens : modulos[0] ? paginasDe(modulos[0]) : []).filter((i) => !i.rota.startsWith('/relatorios'));
+  const semContatos = doModulo.filter((i) => i.rota !== '/contatos');
   const rodape: ItemNav[] = [
     ...(inicio ? [{ rota: '/', rotulo: 'Início', icone: 'hoje' as const }] : []),
-    ...(moduloAtual ? itens : modulos[0] ? paginasDe(modulos[0]) : []).filter((i) => i.rota !== '/contatos' && !i.rota.startsWith('/relatorios')),
+    // Contatos entra só se sobrar lugar (ex.: vendedor: Vendas, Produtos, Clientes)
+    ...((inicio ? 1 : 0) + semContatos.length >= vagas ? semContatos : doModulo),
   ];
   const rodapeEsq = rodape.slice(0, 2);
   const rodapeDir = rodape.slice(2, podeLancarAlgo ? 3 : 4);
@@ -284,8 +287,8 @@ export function AppShell() {
                   key={m}
                   to={PAGINAS_DO_MODULO[m][0].rota}
                   className={`modulos__item${moduloAtual === m ? ' active' : ''}`}
+                  state={{ modulo: m }}
                   aria-current={moduloAtual === m ? 'true' : undefined}
-                  onClick={() => escolherModulo(m)}
                 >
                   {NOME_MODULO[m]}
                   {paginasDe(m).some((i) => i.alerta) && <i className="modulos__ponto" aria-label="tem conta vencida" />}
@@ -300,7 +303,7 @@ export function AppShell() {
             <div className="secoes__lista">
               {!comAbas && moduloAtual && <span className="secoes__modulo">{NOME_MODULO[moduloAtual]}</span>}
               {itens.map((i) => (
-                <NavLink key={i.rota} to={i.rota} className="secoes__item">
+                <NavLink key={i.rota} to={i.rota} state={moduloAtual ? { modulo: moduloAtual } : undefined} className="secoes__item">
                   {i.rotulo}
                   {i.contagem ? <span className={`secoes__contagem${i.alerta ? ' secoes__contagem--alerta' : ''}`}>{i.contagem}</span> : null}
                 </NavLink>
@@ -379,11 +382,9 @@ export function AppShell() {
               <Link
                 key={i.rota}
                 to={i.rota}
+                state={{ modulo: m }}
                 className={`mais__item${moduloAtual === m && ativo(i.rota) ? ' active' : ''}`}
-                onClick={() => {
-                  escolherModulo(m);
-                  setMais(false);
-                }}
+                onClick={() => setMais(false)}
               >
                 <Icone nome={i.icone} />
                 <span>{i.rotulo}</span>

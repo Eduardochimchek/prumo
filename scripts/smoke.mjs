@@ -242,6 +242,16 @@ try {
     await p.keyboard.press('Escape');
   });
 
+  await passo('busca rápida: conta de outra tela abre o detalhe ao chegar', async () => {
+    await p.goto(BASE + '#/vendas');
+    await p.keyboard.press('Control+k');
+    await p.keyboard.type('aluguel');
+    await p.locator('.paleta__item', { hasText: 'Aluguel da loja' }).first().click();
+    await p.waitForURL(/contas\/pagar/, { timeout: 3000 });
+    await p.locator('dialog[open]', { hasText: 'Aluguel da loja' }).waitFor({ timeout: 3000 });
+    await p.keyboard.press('Escape');
+  });
+
   await passo('cadastrar usuário de consulta', async () => {
     await p.goto(BASE + '#/usuarios');
     await p.getByRole('button', { name: 'Novo usuário' }).click();

@@ -18,11 +18,13 @@ const VARIANTE: Record<EtapaVenda, 'aberto' | 'hoje' | 'pago' | 'cancelado'> = {
 
 export function Vendas() {
   const db = useDb();
-  const { pode } = useAuth();
+  const { pode, modulos } = useAuth();
+  // quem é só do Faturamento usa esta tela como fila de pedidos para emitir a nota
+  const soFaturamento = !modulos.includes('comercial');
   const acoes = useAcoes();
   const navegar = useNavigate();
   const [params, setParams] = useSearchParams();
-  const aba = (params.get('aba') as EtapaVenda) || 'orcamento';
+  const aba = (params.get('aba') as EtapaVenda) || (soFaturamento ? 'pedido' : 'orcamento');
   const [busca, setBusca] = useState('');
   const idx = indices(db);
   const mes = mesChave(hoje());
@@ -55,8 +57,8 @@ export function Vendas() {
     <div className="vendas">
       <header className="pagina-cabeca">
         <div className="pagina-cabeca__texto">
-          <p className="rotulo">Faturamento</p>
-          <h1>Vendas</h1>
+          <p className="rotulo">{soFaturamento ? 'Faturamento' : 'Comercial'}</p>
+          <h1>{soFaturamento ? 'Pedidos e vendas' : 'Vendas'}</h1>
         </div>
         <div className="pagina-cabeca__acoes">
           {pode('vender') && (
