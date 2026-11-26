@@ -393,9 +393,9 @@
 }
 
 /* painel de números logo abaixo do cabeçalho da página */
-.pagina-cabeca + .painel {
+.pagina-cabeca + .numeros {
   margin-bottom: 24px;
 }
-.hoje__abertura > .painel {
+.hoje__abertura > .numeros {
   margin-bottom: 0;
 }

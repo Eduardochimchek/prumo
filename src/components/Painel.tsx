@@ -26,16 +26,16 @@ export interface ItemPainel {
 
 export function Painel({ itens, rotulo, className }: { itens: ItemPainel[]; rotulo: string; className?: string }) {
   return (
-    <dl className={classes('painel', `painel--${itens.length}`, className)} aria-label={rotulo} style={{ '--painel-n': itens.length } as CSSProperties}>
+    <dl className={classes('numeros', `numeros--${itens.length}`, className)} aria-label={rotulo} style={{ '--numeros-n': itens.length } as CSSProperties}>
       {itens.map((i) => (
         <div
           key={i.chave}
           className={classes(
-            'painel__item',
-            `painel__item--${i.zerado ? 'zerado' : (i.tom ?? 'neutro')}`,
-            (i.para || i.aoClicar) && 'painel__item--clicavel',
-            i.ativo && 'painel__item--ativo',
-            i.destaque && 'painel__item--destaque',
+            'numeros__item',
+            `numeros__item--${i.zerado ? 'zerado' : (i.tom ?? 'neutro')}`,
+            (i.para || i.aoClicar) && 'numeros__item--clicavel',
+            i.ativo && 'numeros__item--ativo',
+            i.destaque && 'numeros__item--destaque',
           )}
         >
           <dt>
@@ -49,8 +49,8 @@ export function Painel({ itens, rotulo, className }: { itens: ItemPainel[]; rotu
               i.rotulo
             )}
           </dt>
-          <dd className={classes('painel__valor', i.valorClasse)}>{i.valor}</dd>
-          {i.nota != null && <dd className="painel__nota">{i.nota}</dd>}
+          <dd className={classes('numeros__valor', i.valorClasse)}>{i.valor}</dd>
+          {i.nota != null && <dd className="numeros__nota">{i.nota}</dd>}
         </div>
       ))}
     </dl>
