@@ -7,8 +7,10 @@ import { moeda } from '../../lib/format';
 import { formatarLinhaDigitavel } from '../../lib/boleto';
 import { copiarTexto } from '../../lib/util';
 import { useDb } from '../../data/store';
-import { cancelarLancamento, estornarBaixa, reativarLancamento } from '../../data/actions';
-import { indices, statusDe } from '../../data/selectors';
+import { aprovarPagamentos, cancelarLancamento, estornarBaixa, reativarLancamento, retirarAprovacao } from '../../data/actions';
+import { conferirTitulo } from '../../data/conferencia';
+import { AlertasConferencia } from '../AlertasConferencia';
+import { indices, precisaAprovacao, statusDe } from '../../data/selectors';
 import { useAuth, useUsuario } from '../../auth/auth';
 import { Camada } from '../Camada';
 import { Icone } from '../Icone';
@@ -23,6 +25,7 @@ export function DetalheLancamento({
   aoBaixar,
   aoDuplicar,
   aoCobrar,
+  aoCobrarWhatsApp,
   recemPago,
 }: {
   id: string | null;
@@ -31,6 +34,7 @@ export function DetalheLancamento({
   aoBaixar: (ids: string[]) => void;
   aoDuplicar: (id: string) => void;
   aoCobrar: (id: string) => void;
+  aoCobrarWhatsApp: (id: string) => void;
   recemPago?: boolean;
 }) {
   const db = useDb();
@@ -51,6 +55,9 @@ export function DetalheLancamento({
   const nome = (uid?: string) => (uid ? idx.usuarios.get(uid)?.nome ?? 'Usuário removido' : '-');
   const atraso = status === 'vencido' ? diffDias(hoje(), l.vencimento) : 0;
   const pagar = l.tipo === 'pagar';
+  const aguardaAprovacao = precisaAprovacao(db, l);
+  const alertas = conferirTitulo(db, l);
+  const ultimaCobranca = l.cobrancasEnviadas?.at(-1);
 
   return (
     <Camada
@@ -72,6 +79,22 @@ export function DetalheLancamento({
                   <ItemMenu icone="copiar" onClick={() => { fechar(); aoDuplicar(l.id); }}>
                     Duplicar lançamento
                   </ItemMenu>
+                  {pode('aprovar') && l.aprovacao && !l.baixa && (
+                    <ItemMenu
+                      icone="desfazer"
+                      onClick={() => {
+                        fechar();
+                        try {
+                          retirarAprovacao(l.id, usuario.id);
+                          avisar('Aprovação retirada. A conta volta a esperar aprovação.');
+                        } catch (e) {
+                          erro(e);
+                        }
+                      }}
+                    >
+                      Retirar aprovação
+                    </ItemMenu>
+                  )}
                   {status === 'cancelado' ? (
                     <ItemMenu icone="desfazer" onClick={() => { fechar(); reativarLancamento(l.id, usuario.id); avisar('Lançamento reativado.'); }}>
                       Reativar
@@ -121,7 +144,23 @@ export function DetalheLancamento({
               {l.cobranca ? 'Ver boleto/PIX' : 'Gerar boleto/PIX'}
             </Botao>
           )}
-          {pode('baixar') && !l.baixa && status !== 'cancelado' && (
+          {aguardaAprovacao && pode('aprovar') && (
+            <Botao
+              variante="primario"
+              icone="check"
+              onClick={() => {
+                try {
+                  aprovarPagamentos([l.id], usuario.id);
+                  avisar('Pagamento aprovado. Agora ele pode ser pago.');
+                } catch (e) {
+                  erro(e);
+                }
+              }}
+            >
+              Aprovar pagamento
+            </Botao>
+          )}
+          {pode('baixar') && !l.baixa && status !== 'cancelado' && !aguardaAprovacao && (
             <Botao variante="primario" icone="carimbo" onClick={() => aoBaixar([l.id])}>
               {pagar ? 'Registrar pagamento' : 'Registrar recebimento'}
             </Botao>
@@ -155,6 +194,38 @@ export function DetalheLancamento({
           </div>
         )}
       </div>
+
+      {aguardaAprovacao && (
+        <div className="aviso-caixa aviso-caixa--atencao" style={{ marginTop: 18 }}>
+          <Icone nome="cadeado" />
+          <span>
+            <strong>Esperando aprovação.</strong> Pagamentos a partir de {moeda(db.empresa.limiteAprovacao ?? 0)} precisam do OK de um administrador
+            {pode('aprovar') ? '.' : ' antes de serem pagos.'}
+          </span>
+        </div>
+      )}
+      {alertas.length > 0 && (
+        <div style={{ marginTop: 14 }}>
+          <AlertasConferencia alertas={alertas} />
+        </div>
+      )}
+      {!pagar && !l.baixa && status !== 'cancelado' && pode('baixar') && (
+        <div className="detalhe__cobrar">
+          <div>
+            <strong>Cobrar o cliente</strong>
+            <span className="muted">
+              {ultimaCobranca
+                ? `Última cobrança ${tempoRelativo(ultimaCobranca.em)}, por ${nome(ultimaCobranca.usuarioId).split(' ')[0]}.`
+                : status === 'vencido'
+                  ? 'Ainda não foi cobrado pelo Prumo.'
+                  : 'Mande um lembrete antes do vencimento.'}
+            </span>
+          </div>
+          <Botao icone="conversa" onClick={() => aoCobrarWhatsApp(l.id)}>
+            Cobrar no WhatsApp
+          </Botao>
+        </div>
+      )}
 
       <dl className="lista-definicao" style={{ marginTop: 22 }}>
         <dt>{pagar ? 'Fornecedor' : 'Cliente'}</dt>
@@ -258,6 +329,22 @@ export function DetalheLancamento({
               <span>Alterado · {tempoRelativo(l.atualizadoEm)}</span>
             </li>
           )}
+          {l.aprovacao && (
+            <li>
+              <Icone nome="check" tam={14} />
+              <span>
+                Pagamento aprovado por <strong>{nome(l.aprovacao.usuarioId)}</strong> · {tempoRelativo(l.aprovacao.em)}
+              </span>
+            </li>
+          )}
+          {(l.cobrancasEnviadas ?? []).slice(-3).map((c) => (
+            <li key={c.em}>
+              <Icone nome="conversa" tam={14} />
+              <span>
+                Cobrado pelo WhatsApp por <strong>{nome(c.usuarioId)}</strong> · {tempoRelativo(c.em)}
+              </span>
+            </li>
+          ))}
           {l.baixa && (
             <li>
               <Icone nome="carimbo" tam={14} />

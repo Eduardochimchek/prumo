@@ -76,6 +76,10 @@ export function Privacidade({ publica = false }: { publica?: boolean }) {
             Ao buscar um CNPJ ou CEP, só esse número é enviado à BrasilAPI (serviço público e gratuito) para trazer os dados da Receita/Correios. Nenhum outro
             dado sai do aparelho.
           </li>
+          <li>
+            Ao usar “Cobrar no WhatsApp”, o Prumo abre o WhatsApp do seu aparelho (wa.me) com o telefone do cliente e a mensagem pronta. Quem envia é você; a partir daí
+            o WhatsApp trata esses dados pela política dele. O Prumo guarda só a data e quem cobrou.
+          </li>
           <li>As fontes e o código são servidos pelo próprio site: nenhum serviço de terceiros acompanha o que você faz.</li>
         </ul>
 

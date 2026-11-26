@@ -9,10 +9,11 @@ import { conferirSenha, registrarAcesso, registrarEventoSeguranca } from '../dat
 import { limparFalhas, registrarFalha, sessaoExpirada, tempoBloqueio } from '../lib/seguranca';
 import type { Papel, Usuario } from '../data/types';
 
-export type Permissao = 'lancar' | 'baixar' | 'importar' | 'contatos' | 'usuarios' | 'config';
+export type Permissao = 'lancar' | 'baixar' | 'importar' | 'contatos' | 'usuarios' | 'config' | 'aprovar';
 
 const PERMISSOES: Record<Papel, Permissao[]> = {
-  admin: ['lancar', 'baixar', 'importar', 'contatos', 'usuarios', 'config'],
+  // 'aprovar': libera pagamentos acima do limite da empresa (a regra também é checada em actions.ts)
+  admin: ['lancar', 'baixar', 'importar', 'contatos', 'usuarios', 'config', 'aprovar'],
   financeiro: ['lancar', 'baixar', 'importar', 'contatos'],
   leitura: [],
 };
@@ -24,8 +25,8 @@ export const NOME_PAPEL: Record<Papel, string> = {
 };
 
 export const DESCRICAO_PAPEL: Record<Papel, string> = {
-  admin: 'Tudo, inclusive usuários e configurações da empresa.',
-  financeiro: 'Lança contas, dá baixa, importa notas e cadastra contatos.',
+  admin: 'Tudo, inclusive usuários, configurações da empresa e aprovação de pagamentos.',
+  financeiro: 'Lança contas, dá baixa, cobra clientes, importa notas e planilhas e cadastra contatos.',
   leitura: 'Só visualiza e exporta. Ideal para o contador.',
 };
 

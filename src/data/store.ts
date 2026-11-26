@@ -6,7 +6,7 @@ import { useSyncExternalStore } from 'react';
 import type { Database } from './types';
 import { criarBaseDemo } from './seed';
 
-export const VERSAO_BANCO = 2;
+export const VERSAO_BANCO = 3;
 const CHAVE = 'prumo:db:v1';
 
 type Ouvinte = () => void;
@@ -20,8 +20,8 @@ function carregar(): Database {
     if (bruto) {
       const db = JSON.parse(bruto) as Database;
       if (db && db.versao === VERSAO_BANCO && Array.isArray(db.lancamentos)) return db;
-      // v1 em uso de verdade: só ganha as listas novas. v1 de demonstração: recria (ganha produtos e vendas).
-      if (db && db.versao === 1 && !db.demo && Array.isArray(db.lancamentos)) {
+      // Versão antiga em uso de verdade: migra sem perder nada. Demonstração antiga: recria (ganha os cenários novos).
+      if (db && db.versao < VERSAO_BANCO && !db.demo && Array.isArray(db.lancamentos)) {
         const migrado = migrar(db);
         persistir(migrado);
         return migrado;
@@ -37,8 +37,12 @@ function carregar(): Database {
 
 /** Atualiza um banco de versão anterior para a atual sem perder dados. */
 export function migrar(db: Database): Database {
-  if (db.versao === 1) return { ...db, versao: 2, produtos: db.produtos ?? [], vendas: db.vendas ?? [] };
-  return db;
+  let m = db;
+  // v1 → v2: produtos e vendas
+  if (m.versao === 1) m = { ...m, versao: 2, produtos: m.produtos ?? [], vendas: m.vendas ?? [] };
+  // v2 → v3: aprovação de pagamentos, cobrança pelo WhatsApp e categorias de retirada (campos opcionais)
+  if (m.versao === 2) m = { ...m, versao: 3 };
+  return m;
 }
 
 function persistir(db: Database) {

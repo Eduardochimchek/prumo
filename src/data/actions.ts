@@ -2,7 +2,7 @@
 // negócio, grava via `atualizar()` e registra a atividade (trilha de auditoria).
 
 import { agoraISO, hoje, mesChave, type ISODate } from '../lib/dates';
-import { moeda, plural } from '../lib/format';
+import { moeda, normalizarBusca, plural } from '../lib/format';
 import { normalizarCnpj, normalizarDocumento } from '../lib/br';
 import { gerarSal, hashSenha, iguais } from '../lib/sha256';
 import { avaliarSenha, ITERACOES_LEGADO, ITERACOES_SENHA } from '../lib/seguranca';
@@ -12,6 +12,8 @@ import { gerarLinhaDigitavel, lerBoleto } from '../lib/boleto';
 import { pixCopiaECola } from '../lib/pix';
 import { fiscal } from '../services/fiscal';
 import { totaisDaVenda } from './vendas';
+import { chaveTitulo, precisaAprovacao } from './selectors';
+import type { LinhaPlanilha } from '../lib/planilha';
 import { atualizar, getDb } from './store';
 import type {
   Atividade,
@@ -67,12 +69,15 @@ export function editarLancamento(id: string, patch: Partial<NovoLancamento>, usu
   atualizar((db) => {
     const atual = db.lancamentos.find((l) => l.id === id);
     if (!atual) throw new ErroNegocio('Lançamento não encontrado.');
-    const novo = { ...atual, ...patch, atualizadoEm: agoraISO() };
+    // Aprovado e depois mudou valor, boleto, fornecedor ou forma? A aprovação cai: quem aprovou viu outra conta.
+    const campos = ['valor', 'linhaDigitavel', 'contatoId', 'forma', 'tipo'] as const;
+    const perdeAprovacao = !!atual.aprovacao && campos.some((k) => k in patch && patch[k] !== atual[k]);
+    const novo = { ...atual, ...patch, aprovacao: perdeAprovacao ? undefined : atual.aprovacao, atualizadoEm: agoraISO() };
     return comAtividade(
       { ...db, lancamentos: db.lancamentos.map((l) => (l.id === id ? novo : l)) },
       usuarioId,
       'edicao',
-      `editou “${novo.descricao}”`,
+      `editou “${novo.descricao}”${perdeAprovacao ? ' (a aprovação do pagamento foi retirada)' : ''}`,
       { tipo: 'lancamento', id },
     );
   });
@@ -129,6 +134,14 @@ export function darBaixa(ids: string[], dados: DadosBaixa, usuarioId: string): v
   atualizar((db) => {
     const alvo = db.lancamentos.filter((l) => ids.includes(l.id) && !l.baixa && !l.cancelado);
     if (alvo.length === 0) throw new ErroNegocio('Nenhum título em aberto selecionado.');
+    const semAprovacao = alvo.filter((l) => precisaAprovacao(db, l));
+    if (semAprovacao.length) {
+      throw new ErroNegocio(
+        semAprovacao.length === 1
+          ? `“${semAprovacao[0].descricao}” passa do limite de ${moeda(db.empresa.limiteAprovacao ?? 0)} e precisa ser aprovado por um administrador antes do pagamento.`
+          : `${semAprovacao.length} contas passam do limite de ${moeda(db.empresa.limiteAprovacao ?? 0)} e precisam ser aprovadas por um administrador antes do pagamento.`,
+      );
+    }
     const individual = alvo.length === 1;
     let saldo: Lancamento | null = null;
     if (individual && dados.parcial !== undefined) {
@@ -198,6 +211,196 @@ export function estornarBaixa(ids: string[], usuarioId: string): void {
       { tipo: 'lancamento', id: alvo[0].id },
     );
   });
+}
+
+// ---------- Aprovação de pagamentos (alçada) ----------
+
+function exigirAdmin(db: Database, usuarioId: string): void {
+  const u = db.usuarios.find((x) => x.id === usuarioId && x.ativo);
+  if (!u || u.papel !== 'admin') throw new ErroNegocio('Só um administrador pode aprovar pagamentos.');
+}
+
+/** Liga (valor > 0) ou desliga (0) a aprovação de pagamentos a partir de um valor. Só administrador. */
+export function definirLimiteAprovacao(valor: number, usuarioId: string): void {
+  if (!Number.isInteger(valor) || valor < 0) throw new ErroNegocio('Informe um valor válido.');
+  atualizar((db) => {
+    exigirAdmin(db, usuarioId);
+    if ((db.empresa.limiteAprovacao ?? 0) === valor) return db;
+    return comAtividade(
+      { ...db, empresa: { ...db.empresa, limiteAprovacao: valor || undefined } },
+      usuarioId,
+      'config',
+      valor ? `passou a exigir aprovação para pagamentos a partir de ${moeda(valor)}` : 'desligou a aprovação de pagamentos',
+    );
+  });
+}
+
+export function aprovarPagamentos(ids: string[], usuarioId: string): number {
+  let n = 0;
+  atualizar((db) => {
+    exigirAdmin(db, usuarioId);
+    const alvo = new Set(db.lancamentos.filter((l) => ids.includes(l.id) && precisaAprovacao(db, l)).map((l) => l.id));
+    n = alvo.size;
+    if (!n) return db;
+    const em = agoraISO();
+    const aprovados = db.lancamentos.filter((l) => alvo.has(l.id));
+    const total = aprovados.reduce((a, l) => a + l.valor, 0);
+    return comAtividade(
+      { ...db, lancamentos: db.lancamentos.map((l) => (alvo.has(l.id) ? { ...l, aprovacao: { usuarioId, em } } : l)) },
+      usuarioId,
+      'edicao',
+      n === 1 ? `aprovou o pagamento de “${aprovados[0].descricao}” (${moeda(total)})` : `aprovou ${n} pagamentos (${moeda(total)})`,
+      { tipo: 'lancamento', id: aprovados[0].id },
+    );
+  });
+  return n;
+}
+
+export function retirarAprovacao(id: string, usuarioId: string): void {
+  atualizar((db) => {
+    exigirAdmin(db, usuarioId);
+    const l = db.lancamentos.find((x) => x.id === id);
+    if (!l?.aprovacao) return db;
+    if (l.baixa) throw new ErroNegocio('Esta conta já foi paga.');
+    return comAtividade(
+      { ...db, lancamentos: db.lancamentos.map((x) => (x.id === id ? { ...x, aprovacao: undefined } : x)) },
+      usuarioId,
+      'edicao',
+      `retirou a aprovação do pagamento de “${l.descricao}”`,
+      { tipo: 'lancamento', id },
+    );
+  });
+}
+
+// ---------- Cobrança pelo WhatsApp ----------
+
+/** Registra que a cobrança foi aberta no WhatsApp (o envio em si é feito pela pessoa, no aparelho dela). */
+export function registrarCobrancaEnviada(lancamentoId: string, usuarioId: string): void {
+  atualizar((db) => {
+    const l = db.lancamentos.find((x) => x.id === lancamentoId);
+    if (!l || l.tipo !== 'receber') throw new ErroNegocio('Conta a receber não encontrada.');
+    const registro = { em: agoraISO(), usuarioId, canal: 'whatsapp' as const };
+    const cliente = l.contatoId ? db.contatos.find((c) => c.id === l.contatoId) : undefined;
+    return comAtividade(
+      {
+        ...db,
+        lancamentos: db.lancamentos.map((x) => (x.id === lancamentoId ? { ...x, cobrancasEnviadas: [...(x.cobrancasEnviadas ?? []), registro].slice(-20) } : x)),
+      },
+      usuarioId,
+      'cobranca',
+      `cobrou ${cliente ? cliente.fantasia || cliente.nome : 'o cliente'} pelo WhatsApp (“${l.descricao}”)`,
+      { tipo: 'lancamento', id: l.id },
+    );
+  });
+}
+
+// ---------- Importação de planilha ----------
+
+export interface OpcoesImportacaoPlanilha {
+  /** conta prevista dos títulos e conta das linhas que já vêm pagas */
+  contaId?: string;
+  criarContatos: boolean;
+  /** pula linhas iguais a contas já lançadas (mesmo tipo, valor, vencimento e descrição) */
+  pularRepetidas: boolean;
+}
+
+export interface ResultadoPlanilha {
+  criados: number;
+  pagos: number;
+  contatosNovos: number;
+  repetidas: number;
+  semCategoria: string[];
+}
+
+export function importarPlanilha(linhas: LinhaPlanilha[], opts: OpcoesImportacaoPlanilha, usuarioId: string): ResultadoPlanilha {
+  const validas = linhas.filter((l) => l.erros.length === 0 && l.tipo && l.vencimento && l.valor > 0);
+  if (validas.length === 0) throw new ErroNegocio('Nenhuma linha válida para importar.');
+  if (validas.some((l) => l.pagoEm) && !opts.contaId) throw new ErroNegocio('Escolha a conta das linhas que já vêm pagas.');
+  const ref = hoje();
+  if (validas.some((l) => l.pagoEm && l.pagoEm > ref)) throw new ErroNegocio('Há linhas com data de pagamento no futuro.');
+  const resultado: ResultadoPlanilha = { criados: 0, pagos: 0, contatosNovos: 0, repetidas: 0, semCategoria: [] };
+  atualizar((inicial) => {
+    let db = inicial;
+    const existentes = new Set(db.lancamentos.filter((l) => !l.cancelado).map((l) => chaveTitulo(l.tipo, l.valor, l.vencimento, l.descricao)));
+    const contatoPorNome = new Map<string, Contato>();
+    for (const c of db.contatos) {
+      if (c.anonimizadoEm) continue;
+      if (c.fantasia) contatoPorNome.set(normalizarBusca(c.fantasia), c);
+      contatoPorNome.set(normalizarBusca(c.nome), c);
+    }
+    const categoriaPor = (nome: string, tipo: 'pagar' | 'receber') =>
+      db.categorias.find((c) => c.tipo === (tipo === 'pagar' ? 'despesa' : 'receita') && normalizarBusca(c.nome) === normalizarBusca(nome));
+    const semCategoria = new Set<string>();
+    const novos: Lancamento[] = [];
+    const agora = agoraISO();
+    let pagos = 0;
+    let contatosNovos = 0;
+    let repetidas = 0;
+    for (const l of validas) {
+      const tipo = l.tipo!;
+      const vencimento = l.vencimento!;
+      const chave = chaveTitulo(tipo, l.valor, vencimento, l.descricao);
+      if (opts.pularRepetidas && existentes.has(chave)) {
+        repetidas++;
+        continue;
+      }
+      existentes.add(chave);
+      let contato: Contato | undefined;
+      if (l.contato) {
+        const nome = normalizarBusca(l.contato);
+        const tipoDesejado = tipo === 'pagar' ? 'fornecedor' : 'cliente';
+        contato = contatoPorNome.get(nome);
+        if (contato && contato.tipo !== tipoDesejado && contato.tipo !== 'ambos') {
+          const atualizado: Contato = { ...contato, tipo: 'ambos' };
+          db = { ...db, contatos: db.contatos.map((c) => (c.id === atualizado.id ? atualizado : c)) };
+          contato = atualizado;
+          contatoPorNome.set(nome, atualizado);
+        } else if (!contato && opts.criarContatos) {
+          contato = { id: uid('ctt_'), tipo: tipoDesejado, nome: l.contato, documento: '', criadoEm: agora };
+          db = { ...db, contatos: [...db.contatos, contato] };
+          contatoPorNome.set(nome, contato);
+          contatosNovos++;
+        }
+      }
+      const categoria = l.categoria ? categoriaPor(l.categoria, tipo) : undefined;
+      if (l.categoria && !categoria) semCategoria.add(l.categoria);
+      novos.push({
+        id: uid('lan_'),
+        tipo,
+        descricao: l.descricao,
+        contatoId: contato?.id,
+        categoriaId: categoria?.id,
+        contaId: opts.contaId,
+        valor: l.valor,
+        emissao: vencimento <= ref ? vencimento : ref,
+        vencimento,
+        competencia: mesChave(vencimento),
+        documento: l.documento || undefined,
+        observacoes: l.observacoes || undefined,
+        baixa: l.pagoEm
+          ? { data: l.pagoEm, valorPago: l.valor, juros: 0, desconto: 0, contaId: opts.contaId!, usuarioId, registradaEm: agora, observacao: 'Importado de planilha' }
+          : undefined,
+        criadoEm: agora,
+        criadoPor: usuarioId,
+      });
+      if (l.pagoEm) pagos++;
+    }
+    // o resultado só é preenchido depois do laço (se uma regra falhar no meio, nada é gravado)
+    resultado.criados = novos.length;
+    resultado.pagos = pagos;
+    resultado.contatosNovos = contatosNovos;
+    resultado.repetidas = repetidas;
+    resultado.semCategoria = [...semCategoria];
+    if (!novos.length) return db;
+    const aPagar = novos.filter((l) => l.tipo === 'pagar').length;
+    return comAtividade(
+      { ...db, lancamentos: [...db.lancamentos, ...novos] },
+      usuarioId,
+      'importacao',
+      `importou ${plural(novos.length, 'conta', 'contas')} de uma planilha (${aPagar} a pagar, ${novos.length - aPagar} a receber${pagos ? `, ${pagos} já pagas` : ''})`,
+    );
+  });
+  return resultado;
 }
 
 // ---------- Contatos ----------
@@ -668,7 +871,10 @@ export function trocarPropriaSenha(usuarioId: string, atual: string, nova: strin
 
 export function salvarEmpresa(empresa: Empresa, usuarioId: string): void {
   if (!empresa.razaoSocial.trim()) throw new ErroNegocio('Informe a razão social.');
-  atualizar((db) => comAtividade({ ...db, empresa: { ...empresa, cnpj: normalizarCnpj(empresa.cnpj) } }, usuarioId, 'config', 'atualizou os dados da empresa'));
+  // o limite de aprovação tem ação própria (só administrador): aqui ele é preservado
+  atualizar((db) =>
+    comAtividade({ ...db, empresa: { ...empresa, cnpj: normalizarCnpj(empresa.cnpj), limiteAprovacao: db.empresa.limiteAprovacao } }, usuarioId, 'config', 'atualizou os dados da empresa'),
+  );
 }
 
 export function salvarContaBancaria(conta: Omit<ContaBancaria, 'id'> & { id?: string }, usuarioId: string): void {
@@ -686,6 +892,22 @@ export function salvarCategoria(c: Omit<Categoria, 'id'> & { id?: string }, usua
   atualizar((db) => {
     if (c.id) return comAtividade({ ...db, categorias: db.categorias.map((x) => (x.id === c.id ? { ...x, ...c, id: x.id } : x)) }, usuarioId, 'config', `renomeou a categoria ${c.nome}`);
     return comAtividade({ ...db, categorias: [...db.categorias, { ...c, id: uid('cat_') }] }, usuarioId, 'config', `criou a categoria ${c.nome}`);
+  });
+}
+
+/** Marca uma categoria de despesa como retirada dos sócios (fica fora das despesas no DRE). */
+export function definirRetirada(id: string, retirada: boolean, usuarioId: string): void {
+  atualizar((db) => {
+    const c = db.categorias.find((x) => x.id === id);
+    if (!c) throw new ErroNegocio('Categoria não encontrada.');
+    if (c.tipo !== 'despesa') throw new ErroNegocio('Só categorias de despesa podem ser retirada dos sócios.');
+    if (!!c.retirada === retirada) return db;
+    return comAtividade(
+      { ...db, categorias: db.categorias.map((x) => (x.id === id ? { ...x, retirada: retirada || undefined } : x)) },
+      usuarioId,
+      'config',
+      retirada ? `marcou “${c.nome}” como retirada dos sócios` : `desmarcou “${c.nome}” como retirada dos sócios`,
+    );
   });
 }
 

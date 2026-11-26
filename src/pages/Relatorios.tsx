@@ -30,6 +30,8 @@ export function Relatorios() {
   const totalDesp = r.totalDespesas.reduce((a, b) => a + b, 0);
   const resultado = totalRec - totalDesp;
   const margem = totalRec ? (resultado / totalRec) * 100 : 0;
+  const totalRetiradas = r.totalRetiradas.reduce((a, b) => a + b, 0);
+  const sobrou = resultado - totalRetiradas;
 
   const exportarDre = () => {
     const linhas: (string | number)[][] = [['Linha', ...meses.map(mesAbrev), 'Total']];
@@ -38,6 +40,11 @@ export function Relatorios() {
     linhas.push(['DESPESAS', ...r.totalDespesas.map(f), f(totalDesp)]);
     r.despesas.forEach((l) => linhas.push([`  ${l.nome}`, ...l.valores.map(f), f(l.total)]));
     linhas.push(['RESULTADO', ...r.resultado.map(f), f(resultado)]);
+    if (r.retiradas.length) {
+      linhas.push(['RETIRADAS DOS SÓCIOS', ...r.totalRetiradas.map(f), f(totalRetiradas)]);
+      r.retiradas.forEach((l) => linhas.push([`  ${l.nome}`, ...l.valores.map(f), f(l.total)]));
+      linhas.push(['SOBROU NA EMPRESA', ...r.sobrou.map(f), f(sobrou)]);
+    }
     baixarArquivo(`prumo-dre-${regime}-${ref}.csv`, gerarCsv(linhas), 'text/csv;charset=utf-8');
   };
 
@@ -152,6 +159,17 @@ export function Relatorios() {
             zerado: !resultado,
             nota: resultado >= 0 ? 'lucro no período' : 'prejuízo no período',
           },
+          ...(totalRetiradas > 0
+            ? [
+                {
+                  chave: 'retiradas',
+                  rotulo: 'Retiradas dos sócios',
+                  valor: moeda(totalRetiradas),
+                  tom: totalRetiradas > resultado ? ('critico' as const) : ('neutro' as const),
+                  nota: totalRetiradas > resultado ? 'mais do que a empresa lucrou' : `sobrou ${moeda(sobrou)} na empresa`,
+                },
+              ]
+            : []),
           {
             chave: 'margem',
             rotulo: 'Margem',
@@ -191,6 +209,7 @@ export function Relatorios() {
         {regime === 'caixa'
           ? 'Caixa: conta o que efetivamente foi pago e recebido, no mês da baixa.'
           : 'Competência: conta pelo mês a que a receita ou despesa se refere, pago ou não.'}{' '}
+        {r.retiradas.length > 0 && 'Retiradas dos sócios ficam fora das despesas e aparecem depois do resultado. '}
         Este é um demonstrativo gerencial e não substitui a contabilidade oficial.
       </p>
 
@@ -236,6 +255,28 @@ export function Relatorios() {
               ))}
               <td className="valor">{numero(margem, 1)}%</td>
             </tr>
+            {r.retiradas.length > 0 && (
+              <>
+                <tr className="dre__retirada">
+                  <td>Retiradas dos sócios</td>
+                  {r.totalRetiradas.map((v, i) => (
+                    <td key={i} className="valor">
+                      {v ? moeda(-v, { sinal: true }) : '-'}
+                    </td>
+                  ))}
+                  <td className="valor">{moeda(-totalRetiradas, { sinal: true })}</td>
+                </tr>
+                <tr className="dre__sobrou">
+                  <td>Sobrou na empresa</td>
+                  {r.sobrou.map((v, i) => (
+                    <td key={i} className={`valor ${v >= 0 ? 'entrada-txt' : 'critico-txt'}`}>
+                      {moeda(v, { sinal: true })}
+                    </td>
+                  ))}
+                  <td className={`valor ${sobrou >= 0 ? 'entrada-txt' : 'critico-txt'}`}>{moeda(sobrou, { sinal: true })}</td>
+                </tr>
+              </>
+            )}
           </tfoot>
         </table>
       </div>

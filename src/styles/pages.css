@@ -458,6 +458,14 @@
   color: var(--saida);
   border-color: color-mix(in oklab, var(--saida) 45%, transparent);
 }
+.titulo-linha__sentido--critico {
+  color: var(--critico);
+  border-color: color-mix(in oklab, var(--critico) 45%, transparent);
+}
+.titulo-linha__sentido--atencao {
+  color: var(--atencao);
+  border-color: color-mix(in oklab, var(--atencao) 45%, transparent);
+}
 .titulo-linha__texto {
   flex: 1;
   min-width: 0;
@@ -1302,6 +1310,15 @@
   font-weight: 500;
   font-size: 13px;
 }
+/* retiradas dos sócios: depois do resultado, fora das despesas */
+.dre .dre__retirada td {
+  font-weight: 500;
+  color: var(--tinta-2);
+}
+.dre .dre__sobrou td {
+  border-top: none;
+  padding-top: 6px;
+}
 .exportacoes {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
@@ -1679,5 +1696,45 @@
   }
   .razao th {
     position: static;
+  }
+}
+
+/* coluna Situação do livro: o status e, abaixo, os selos de aprovação/conferência */
+.livro__status {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+}
+@media (max-width: 860px) {
+  .livro__linha .livro__status {
+    flex-direction: row;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+  }
+}
+.barra-lote__aviso {
+  font-size: 13px;
+}
+
+/* Configurações: aprovação de pagamentos (abaixo dos dados da empresa) */
+.config__secao {
+  max-width: 760px;
+  margin-top: 40px;
+  padding-top: 24px;
+  border-top: 1px solid var(--tinta);
+}
+.categorias__lista li .check {
+  font-size: 13px;
+  color: var(--tinta-2);
+}
+
+/* ação que fica visível no celular (ex.: cobrar no WhatsApp), só com o ícone */
+@media (max-width: 560px) {
+  .titulo-linha__acao--sempre .btn {
+    display: inline-flex;
+  }
+  .so-tela-larga {
+    display: none;
   }
 }

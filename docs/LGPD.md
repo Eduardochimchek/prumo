@@ -45,6 +45,8 @@ Dados sensíveis (art. 11): **nenhum**. O Prumo não pede saúde, religião, bio
 ## Compartilhamento
 
 - BrasilAPI: recebe só o CNPJ ou o CEP digitado, para consulta pública. Nenhum outro dado é enviado.
+- WhatsApp (“Cobrar no WhatsApp”): o Prumo não envia nada. Ele abre o WhatsApp do próprio usuário (link `wa.me`) com o telefone do cliente e a mensagem pronta; quem envia é a pessoa, e a partir daí o WhatsApp trata esses dados pela política dele. Finalidade: cobrança de valor devido (execução de contrato e exercício regular de direito, art. 7º, V e VI). Na demonstração o link abre sem telefone.
+- O registro “cobrado pelo WhatsApp” guarda só a data e quem cobrou, junto do título (mesma retenção do título).
 - Nenhum serviço de analytics, anúncios ou fontes externas.
 
 ## Incidentes (art. 48)

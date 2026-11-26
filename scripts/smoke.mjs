@@ -310,6 +310,91 @@ try {
     if (!(await ligado()).startsWith('7 dias')) throw new Error(`filtro errado: ${await ligado()}`);
   });
 
+  await passo('aprovação: financeiro não paga acima do limite; administrador aprova e libera', async () => {
+    await sair();
+    await entrar('ana.paula', 'ana123');
+    await p.goto(BASE + '#/contas/pagar?periodo=aprovar');
+    const primeira = p.locator('.livro__linha').first();
+    const descricao = (await primeira.locator('.livro__desc strong').innerText()).trim();
+    await primeira.click();
+    await p.getByText('Esperando aprovação.').waitFor({ timeout: 3000 });
+    if (await p.getByRole('button', { name: 'Registrar pagamento' }).count()) throw new Error('financeiro conseguiria pagar sem aprovação');
+    if (await p.getByRole('button', { name: 'Aprovar pagamento' }).count()) throw new Error('financeiro vê o botão de aprovar');
+    await p.keyboard.press('Escape');
+    await sair();
+    await entrar('admin', 'admin123');
+    await p.goto(BASE + '#/contas/pagar?periodo=aprovar');
+    await p.locator('.livro__linha', { hasText: descricao }).first().click();
+    await p.getByRole('button', { name: 'Aprovar pagamento' }).click();
+    await aviso('Pagamento aprovado');
+    await p.getByRole('button', { name: 'Registrar pagamento' }).waitFor({ timeout: 3000 });
+    await p.keyboard.press('Escape');
+  });
+
+  await passo('boleto de banco trocado: só paga depois de confirmar a conferência', async () => {
+    await p.goto(BASE + '#/contas/pagar?periodo=30d');
+    await p.locator('.livro__linha', { hasText: 'pedido 4471' }).click();
+    await p.getByText('Banco diferente do habitual').first().waitFor({ timeout: 3000 });
+    await p.getByRole('button', { name: 'Registrar pagamento' }).click();
+    const confirmar = p.getByRole('button', { name: 'Confirmar pagamento' });
+    if (!(await confirmar.isDisabled())) throw new Error('pagamento liberado sem conferir');
+    await p.getByText('Conferi com o fornecedor').click();
+    await confirmar.click();
+    await aviso('Pagamento registrado');
+    await p.keyboard.press('Escape');
+  });
+
+  await passo('cobrar cliente pelo WhatsApp: mensagem pronta e cobrança registrada', async () => {
+    await contexto.route('https://wa.me/**', (r) => r.fulfill({ status: 200, contentType: 'text/plain', body: 'whatsapp' }));
+    await p.goto(BASE + '#/');
+    const secao = p.locator('section[aria-label="Cobrar hoje"]');
+    const cliente = (await secao.locator('.titulo-linha__texto strong').first().innerText()).trim();
+    await secao.locator('.titulo-linha__acao button').first().click();
+    const msg = await p.locator('#w-msg').inputValue();
+    if (!msg.includes('Horizonte Materiais') || !msg.includes('R$')) throw new Error('mensagem sem empresa ou valor');
+    const link = p.locator('a', { hasText: 'Abrir no WhatsApp' });
+    const href = (await link.getAttribute('href')) ?? '';
+    if (!href.startsWith('https://wa.me/?text=')) throw new Error(`na demonstração o link não pode levar número: ${href.slice(0, 30)}`);
+    const [aba] = await Promise.all([p.waitForEvent('popup'), link.click()]);
+    await aba.close();
+    await aviso('Cobrança registrada');
+    await p.locator('.atividades', { hasText: `cobrou ${cliente} pelo WhatsApp` }).waitFor({ timeout: 3000 });
+  });
+
+  await passo('importar contas de uma planilha colada do Excel', async () => {
+    await p.getByRole('button', { name: 'Lançar' }).click();
+    await p.getByRole('menuitem', { name: 'Importar planilha' }).click();
+    await p.fill(
+      '#p-texto',
+      ['Vencimento\tDescrição\tFornecedor\tValor\tPago?', '10/12/2026\tSeguro da frota (fumaça)\tSeguradora Fumaça\t1.180,50\t', '05/11/2026\tLimpeza da fachada (fumaça)\tSeguradora Fumaça\t300,00\tsim'].join('\n'),
+    );
+    await p.getByRole('button', { name: 'Continuar' }).click();
+    await p.getByRole('button', { name: 'Importar 2 contas' }).click();
+    await aviso('2 contas importadas');
+    await p.goto(BASE + '#/contas/pagar?periodo=todos');
+    await p.fill('input[aria-label="Buscar"]', '(fumaça)');
+    await p.waitForTimeout(200);
+    const n = await p.locator('.livro__linha').count();
+    if (n !== 2) throw new Error(`esperava 2 contas importadas, achei ${n}`);
+  });
+
+  await passo('simulador do fluxo mostra o efeito de uma compra grande', async () => {
+    await p.goto(BASE + '#/fluxo');
+    await p.getByRole('button', { name: 'Simular um cenário' }).click();
+    await p.locator('.simulador .segmentado button', { hasText: 'Entrada ou saída extra' }).click();
+    await p.click('#s-valor');
+    await p.keyboard.type('2000000'); // R$ 20.000,00
+    await p.getByRole('button', { name: 'Adicionar' }).click();
+    const dif = await p.locator('.simulacao__resultado .numeros__item', { hasText: 'Diferença no fim' }).locator('.numeros__valor').innerText();
+    if (!dif.includes('20.000,00')) throw new Error(`diferença errada: ${dif}`);
+  });
+
+  await passo('retiradas dos sócios aparecem separadas no resultado (DRE)', async () => {
+    await p.goto(BASE + '#/relatorios');
+    await p.locator('.dre__retirada').waitFor({ timeout: 3000 });
+    await p.locator('.dre__sobrou', { hasText: 'Sobrou na empresa' }).waitFor({ timeout: 3000 });
+  });
+
   if (erros.length) resultados.push(['falhou', 'erros de JavaScript na página', [...new Set(erros)].join(' | ')]);
   await navegador.close();
 } finally {

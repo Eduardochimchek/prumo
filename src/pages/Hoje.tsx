@@ -4,10 +4,11 @@
 
 import { useMemo, useState, type ReactNode } from 'react';
 import { Link, useNavigate } from 'react-router';
-import { addMesesChave, dataBR, dataExtenso, diaMes, hoje, mesChave, mesLongo, relativoDias, saudacao, tempoRelativo } from '../lib/dates';
+import { addDias, addMesesChave, dataBR, dataExtenso, diaMes, diffDias, hoje, mesChave, mesLongo, relativoDias, saudacao, tempoRelativo, toISO } from '../lib/dates';
 import { moeda, plural } from '../lib/format';
 import { useDb } from '../data/store';
-import { agenda, briefing, fluxoMensal, indices, nomeContato, porCategoria, saldoConta, statusDe, vendasDoMes } from '../data/selectors';
+import { agenda, briefing, emAberto, fluxoMensal, indices, nomeContato, paraCobrar, porCategoria, saldoConta, statusDe, vendasDoMes } from '../data/selectors';
+import { conferirTitulo } from '../data/conferencia';
 import type { Lancamento } from '../data/types';
 import { useAuth, useUsuario } from '../auth/auth';
 import { useAcoes } from '../components/Acoes';
@@ -156,6 +157,17 @@ export function Hoje() {
   const primeiroNome = usuario.nome.split(' ')[0];
   const dia = dias.find((d) => d.data === diaSel) ?? dias[0];
 
+  // boletos a pagar nos próximos 30 dias com alerta grave (banco trocado, já pago, valor diferente da nota)
+  const conferir = useMemo(() => {
+    const ate = addDias(ref, 30);
+    return db.lancamentos
+      .filter((l) => l.tipo === 'pagar' && emAberto(l) && l.vencimento <= ate)
+      .map((l) => ({ l, alerta: conferirTitulo(db, l, ref).find((a) => a.nivel === 'critico') }))
+      .filter((x): x is { l: Lancamento; alerta: NonNullable<typeof x.alerta> } => !!x.alerta)
+      .sort((a, b) => (a.l.vencimento < b.l.vencimento ? -1 : 1));
+  }, [db, ref]);
+  const cobrar = useMemo(() => paraCobrar(db, ref, 3), [db, ref]);
+
   // ----- painel de números -----
   const { pagar, receber } = b;
   const mesNome = mesLongo(mesChave(ref)).split(' de ')[0];
@@ -229,7 +241,58 @@ export function Hoje() {
 
   // ----- pendências -----
   const pendencias: ReactNode[] = [];
-  b.vencidos.slice(0, 5).forEach((l) =>
+  if (b.aprovar.length) {
+    const total = b.aprovar.reduce((a, l) => a + l.valor, 0);
+    const souAprovador = pode('aprovar');
+    pendencias.push(
+      <li key="aprovar" className="titulo-linha">
+        <button type="button" className="titulo-linha__principal" onClick={() => navegar('/contas/pagar?periodo=aprovar')}>
+          <span className="titulo-linha__sentido titulo-linha__sentido--atencao">
+            <Icone nome="cadeado" tam={15} />
+          </span>
+          <span className="titulo-linha__texto">
+            <strong className="truncar">
+              {b.aprovar.length === 1 ? '1 pagamento espera' : `${b.aprovar.length} pagamentos esperam`} {souAprovador ? 'a sua aprovação' : 'aprovação do administrador'}
+            </strong>
+            <span className="truncar">
+              {b.aprovar.slice(0, 2).map((l) => l.descricao).join(' · ')}
+              {b.aprovar.length > 2 ? ` e mais ${b.aprovar.length - 2}` : ''}
+            </span>
+          </span>
+          <span className="titulo-linha__valor num">{moeda(total)}</span>
+        </button>
+        <span className="titulo-linha__acao">
+          <Botao tam="p" onClick={() => navegar('/contas/pagar?periodo=aprovar')}>
+            {souAprovador ? 'Aprovar' : 'Ver'}
+          </Botao>
+        </span>
+      </li>,
+    );
+  }
+  conferir.slice(0, 3).forEach(({ l, alerta }) =>
+    pendencias.push(
+      <li key={`conf-${l.id}`} className="titulo-linha">
+        <button type="button" className="titulo-linha__principal" onClick={() => acoes.verLancamento(l.id)}>
+          <span className="titulo-linha__sentido titulo-linha__sentido--critico">
+            <Icone nome="alerta" tam={15} />
+          </span>
+          <span className="titulo-linha__texto">
+            <strong className="truncar">Conferir antes de pagar: {alerta.titulo.toLowerCase()}</strong>
+            <span className="truncar">
+              {l.descricao} · vence {relativoDias(l.vencimento)}
+            </span>
+          </span>
+          <span className="titulo-linha__valor num">{moeda(l.valor)}</span>
+        </button>
+        <span className="titulo-linha__acao">
+          <Botao tam="p" onClick={() => acoes.verLancamento(l.id)}>
+            Conferir
+          </Botao>
+        </span>
+      </li>,
+    ),
+  );
+  b.vencidos.filter((l) => l.tipo === 'pagar').slice(0, 5).forEach((l) =>
     pendencias.push(
       <LinhaTitulo key={l.id} l={l} podeBaixar={pode('baixar')} aoAbrir={() => acoes.verLancamento(l.id)} aoBaixar={() => acoes.darBaixa([l.id])} />,
     ),
@@ -440,31 +503,64 @@ export function Hoje() {
             </div>
           )}
         </section>
-        <section aria-label="Saldo por conta">
+        <section aria-label="Cobrar hoje">
           <div className="secao-titulo">
-            <h2>Saldo por conta</h2>
-            <span className="num" style={{ fontWeight: 600 }}>
-              {moeda(b.saldo)}
-            </span>
+            <h2>Cobrar hoje</h2>
+            {cobrar.length > 0 && (
+              <span className="muted num" style={{ fontSize: 13 }}>
+                {moeda(cobrar.reduce((a, l) => a + l.valor, 0))}
+              </span>
+            )}
           </div>
-          <ul className="contas-saldo contas-saldo--solto">
-            {contas.map(({ c, saldo }) => (
-              <li key={c.id}>
-                <div className="contas-saldo__linha">
-                  <span>
-                    <Icone nome={c.tipo === 'caixa' ? 'dinheiro' : 'banco'} tam={15} /> {c.nome}
-                  </span>
-                  <span className={`num${saldo < 0 ? ' critico-txt' : ''}`}>{moeda(saldo)}</span>
-                </div>
-                <div className="barra-fina" aria-hidden="true">
-                  <span style={{ width: `${(Math.abs(saldo) / maxConta) * 100}%`, background: saldo < 0 ? 'var(--critico)' : undefined }} />
-                </div>
-              </li>
-            ))}
-          </ul>
-          <Link to="/fluxo" className="hoje__saldo-link">
-            Ver projeção dia a dia <Icone nome="avancar" tam={15} />
-          </Link>
+          {cobrar.length ? (
+            <ul className="lista-titulos">
+              {cobrar.slice(0, 6).map((l) => {
+                const atraso = l.vencimento < ref ? diffDias(ref, l.vencimento) : 0;
+                const ultima = l.cobrancasEnviadas?.at(-1);
+                const cobradoHoje = !!ultima && toISO(new Date(ultima.em)) === ref;
+                return (
+                  <li key={l.id} className="titulo-linha">
+                    <button type="button" className="titulo-linha__principal" onClick={() => acoes.verLancamento(l.id)}>
+                      <span className={`titulo-linha__sentido titulo-linha__sentido--${atraso ? 'critico' : 'receber'}`}>
+                        <Icone nome="receber" tam={15} />
+                      </span>
+                      <span className="titulo-linha__texto">
+                        <strong className="truncar">{nomeContato(db, l.contatoId) || l.descricao}</strong>
+                        <span className="truncar">
+                          {atraso ? `${plural(atraso, 'dia', 'dias')} de atraso` : l.vencimento === ref ? 'vence hoje' : `vence ${relativoDias(l.vencimento)}`}
+                          {ultima ? ` · cobrado ${tempoRelativo(ultima.em)}` : ''}
+                        </span>
+                      </span>
+                      <span className="titulo-linha__valor num">{moeda(l.valor)}</span>
+                    </button>
+                    {pode('baixar') && (
+                      <span className="titulo-linha__acao titulo-linha__acao--sempre">
+                        <Botao
+                          tam="p"
+                          icone="conversa"
+                          variante={cobradoHoje ? 'fantasma' : 'secundario'}
+                          aria-label={`Cobrar ${nomeContato(db, l.contatoId)} no WhatsApp`}
+                          onClick={() => acoes.cobrarWhatsApp(l.id)}
+                        >
+                          <span className="so-tela-larga">{cobradoHoje ? 'Cobrado' : 'WhatsApp'}</span>
+                        </Botao>
+                      </span>
+                    )}
+                  </li>
+                );
+              })}
+              {cobrar.length > 6 && (
+                <li className="muted" style={{ padding: '10px 0' }}>
+                  e mais {cobrar.length - 6}: <Link to="/contas/receber?periodo=7d">ver todos</Link>
+                </li>
+              )}
+            </ul>
+          ) : (
+            <div className="aviso-caixa aviso-caixa--ok">
+              <Icone nome="check" />
+              <span>Ninguém para cobrar agora: nenhum cliente atrasado e nada vencendo nos próximos 3 dias.</span>
+            </div>
+          )}
         </section>
       </div>
 
@@ -508,28 +604,56 @@ export function Hoje() {
           </Link>
         </section>
       </div>
-      <section className="hoje__atividade">
-        <div className="secao-titulo">
-          <h2>Atividade</h2>
-          <span className="muted" style={{ fontSize: 13 }}>
-            quem fez o quê
-          </span>
-        </div>
-        <ol className="atividades">
-          {db.atividades.filter((a) => a.tipo !== 'seguranca' && a.tipo !== 'privacidade').slice(0, 7).map((a) => {
-            const u = idx.usuarios.get(a.usuarioId);
-            return (
-              <li key={a.id}>
-                <Avatar nome={u?.nome ?? '?'} tam="p" />
-                <span className="atividades__texto">{a.texto}</span>
-                <time className="atividades__quando" dateTime={a.em}>
-                  {tempoRelativo(a.em)}
-                </time>
+      <div className="hoje__colunas">
+        <section aria-label="Saldo por conta">
+          <div className="secao-titulo">
+            <h2>Saldo por conta</h2>
+            <span className="num" style={{ fontWeight: 600 }}>
+              {moeda(b.saldo)}
+            </span>
+          </div>
+          <ul className="contas-saldo contas-saldo--solto">
+            {contas.map(({ c, saldo }) => (
+              <li key={c.id}>
+                <div className="contas-saldo__linha">
+                  <span>
+                    <Icone nome={c.tipo === 'caixa' ? 'dinheiro' : 'banco'} tam={15} /> {c.nome}
+                  </span>
+                  <span className={`num${saldo < 0 ? ' critico-txt' : ''}`}>{moeda(saldo)}</span>
+                </div>
+                <div className="barra-fina" aria-hidden="true">
+                  <span style={{ width: `${(Math.abs(saldo) / maxConta) * 100}%`, background: saldo < 0 ? 'var(--critico)' : undefined }} />
+                </div>
               </li>
-            );
-          })}
-        </ol>
-      </section>
+            ))}
+          </ul>
+          <Link to="/fluxo" className="hoje__saldo-link">
+            Ver projeção dia a dia <Icone nome="avancar" tam={15} />
+          </Link>
+        </section>
+        <section className="hoje__atividade">
+          <div className="secao-titulo">
+            <h2>Atividade</h2>
+            <span className="muted" style={{ fontSize: 13 }}>
+              quem fez o quê
+            </span>
+          </div>
+          <ol className="atividades">
+            {db.atividades.filter((a) => a.tipo !== 'seguranca' && a.tipo !== 'privacidade').slice(0, 7).map((a) => {
+              const u = idx.usuarios.get(a.usuarioId);
+              return (
+                <li key={a.id}>
+                  <Avatar nome={u?.nome ?? '?'} tam="p" />
+                  <span className="atividades__texto">{a.texto}</span>
+                  <time className="atividades__quando" dateTime={a.em}>
+                    {tempoRelativo(a.em)}
+                  </time>
+                </li>
+              );
+            })}
+          </ol>
+        </section>
+      </div>
     </div>
   );
 }

@@ -41,10 +41,11 @@ Idealizado por **Reginaldo Jeronimo**, profissional do financeiro administrativo
 ## O que a V1 já faz
 
 **Painel “Hoje”**
-- Manchete automática: o que vence hoje, o que atrasou, quanto sai e entra na semana e como o caixa fecha o mês.
-- Saldo em caixa por conta bancária, com a projeção para o fim do mês.
+- **Painel de números**: saldo em caixa, o que entra e sai hoje, contas vencidas, recebimentos atrasados e vendas do mês, cada um levando à lista certa.
+- Saldo por conta bancária, com a projeção para o fim do mês.
 - Agenda dos próximos 14 dias (entradas sobem, saídas descem), lista do dia com baixa rápida.
-- “Para resolver”: contas vencidas, notas que ainda não viraram contas, notas aguardando manifestação na SEFAZ.
+- “Para resolver”: pagamentos esperando aprovação, boletos para conferir antes de pagar, contas vencidas, notas que ainda não viraram contas, notas aguardando manifestação na SEFAZ.
+- **“Cobrar hoje”**: clientes atrasados e contas que vencem nos próximos 3 dias, com o botão do WhatsApp em cada uma.
 - **Vendas do mês**: quanto foi faturado, notas emitidas, orçamentos em aberto, pedidos esperando nota e as últimas notas.
 - Atividade da equipe (quem fez o quê) e para onde vai o dinheiro do mês.
 
@@ -61,6 +62,10 @@ Idealizado por **Reginaldo Jeronimo**, profissional do financeiro administrativo
 - Filtros (vencidas, 7 dias, 30 dias, mês, pagas), busca, categoria, **baixa em lote**, juros/desconto, estorno e **“Desfazer”**.
 - Carimbo de “PAGO” no título quitado, histórico completo, parcelas irmãs, nota de origem.
 - Exportação para Excel (CSV no padrão brasileiro).
+- **Conferência antes de pagar**: o Prumo avisa quando o boleto já foi lançado ou pago, quando o valor não bate com a duplicata da nota, quando vem de um banco que o fornecedor nunca usou (o golpe do boleto adulterado) e quando a conta parece repetida. Alerta grave pede confirmação na hora de pagar.
+- **Aprovação de pagamentos**: a partir de um valor (configurável), o pagamento só sai depois do OK de um administrador. Se o valor ou o boleto mudar depois, a aprovação cai.
+- **Cobrar pelo WhatsApp**: mensagem pronta e educada (lembrete, vence hoje ou atraso), com o PIX junto, que a pessoa revisa e envia do próprio WhatsApp. O Prumo registra quem cobrou e quando.
+- **Importar planilha**: copie as linhas do Excel/Google Planilhas (ou envie um CSV) e cole; o Prumo entende “R$ 1.234,56” e “05/12/2026”, sugere o que é cada coluna, mostra a prévia linha a linha, pula as contas já lançadas e cadastra os fornecedores/clientes que faltam.
 
 **Notas fiscais (NF-e)**
 - **Importação do XML** (um ou vários de uma vez): lê emitente, destinatário, itens, impostos e duplicatas; decide sozinho se é compra (você é o destinatário) ou venda (você é o emitente); cadastra o fornecedor/cliente e **gera as contas a pagar/receber pelas duplicatas**. Bloqueia nota repetida.
@@ -71,14 +76,15 @@ Idealizado por **Reginaldo Jeronimo**, profissional do financeiro administrativo
 
 **Fluxo de caixa e relatórios**
 - Projeção do saldo **dia a dia** (30/60/90 dias) com o “dia mais apertado” destacado.
+- **Simulador “E se…?”**: adiar um pagamento, um cliente atrasar (ou não pagar), uma compra grande, receber menos (teste do split payment da reforma tributária). Mostra o antes e o depois sem gravar nada.
 - Mês a mês: realizado × previsto e saldo no fim de cada mês, com tabela.
-- **DRE gerencial** por regime de caixa ou competência (3, 6 ou 12 meses).
+- **DRE gerencial** por regime de caixa ou competência (3, 6 ou 12 meses). **Retiradas dos sócios** ficam fora das despesas e aparecem depois do resultado, com “sobrou na empresa”.
 - Planilhas para o contador: lançamentos, notas e contatos.
 
 **Cadastros e equipe**
 - Clientes e fornecedores com **busca do CNPJ na Receita Federal** (BrasilAPI) e do CEP.
 - Suporte ao **CNPJ alfanumérico** (novo formato emitido desde julho de 2026).
-- **Usuários com data de cadastro**, quem cadastrou, último acesso, ativo/inativo e três níveis de acesso: Administrador, Financeiro e Consulta (ideal para o contador).
+- **Usuários com data de cadastro**, quem cadastrou, último acesso, ativo/inativo e três níveis de acesso: Administrador (inclui aprovar pagamentos), Financeiro e Consulta (ideal para o contador).
 - Empresa, contas bancárias, categorias, backup/restauração e “começar de verdade” (zera os dados de demonstração).
 
 **Segurança e LGPD**
@@ -224,18 +230,19 @@ Sendo direto sobre o que esta versão é:
 ## Roadmap
 
 **V1: protótipo funcional (esta versão)** ✓
-Painel, contas a pagar/receber, boleto, NF-e por XML, caixa SEFAZ simulada, fluxo de caixa, DRE, contatos com CNPJ, usuários e permissões, PWA, tema escuro. Faturamento de demonstração: produtos, orçamento → pedido → NF-e simulada → contas a receber → boleto/PIX simulado com baixa automática.
+Painel, contas a pagar/receber, boleto, NF-e por XML, caixa SEFAZ simulada, fluxo de caixa com simulador “E se…?”, DRE com retiradas dos sócios, contatos com CNPJ, usuários e permissões, PWA, tema escuro. Faturamento de demonstração: produtos, orçamento → pedido → NF-e simulada → contas a receber → boleto/PIX simulado com baixa automática. Conferência do boleto antes de pagar, aprovação de pagamentos, cobrança pelo WhatsApp e importação de planilha.
 
 **V2: uso real pela equipe**
 - Backend (API Node + PostgreSQL), autenticação segura, multiempresa e dados na nuvem.
 - **SEFAZ de verdade**: certificado A1, download automático das NF-e contra o CNPJ, manifestação, consulta de situação.
 - **Conciliação bancária**: importar extrato OFX/CNAB e casar com os títulos; transferências entre contas.
 - Guardar o XML original e gerar o PDF do DANFE.
-- Cobrança: lembrete de vencimento por e-mail/WhatsApp, emissão de boleto e PIX (via banco/gateway).
+- Cobrança automática: régua de lembretes por e-mail/WhatsApp sem precisar abrir o Prumo, emissão de boleto e PIX (via banco/gateway), Pix Automático para cobranças recorrentes.
+- DDA (boletos emitidos contra o CNPJ entram sozinhos) e extrato pelo Open Finance.
 
 **V3: produto vendável**
-- Planos e assinatura, onboarding guiado, importação de planilhas.
-- NFS-e (padrão nacional), centros de custo, orçamento × realizado, aprovação de pagamentos em alçadas.
+- Planos e assinatura (mensal, sem fidelidade, cancelamento simples), onboarding guiado.
+- NFS-e (padrão nacional), centros de custo, orçamento × realizado, alçadas de aprovação em mais de um nível.
 - Campos de IBS/CBS da reforma tributária nas notas e relatórios.
 - Portal do contador e app nativo (se o PWA não bastar).
 

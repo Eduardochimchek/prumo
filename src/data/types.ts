@@ -41,6 +41,8 @@ export interface Empresa {
   uf: string;
   municipio: string;
   regime: Regime;
+  /** pagamentos a partir deste valor precisam da aprovação de um administrador (ausente ou 0 = desligado) */
+  limiteAprovacao?: Centavos;
 }
 
 export type TipoContato = 'cliente' | 'fornecedor' | 'ambos';
@@ -70,6 +72,8 @@ export interface Categoria {
   id: ID;
   nome: string;
   tipo: TipoCategoria;
+  /** despesa que é dinheiro indo para o sócio (lucro retirado, conta pessoal): fica fora das despesas no DRE */
+  retirada?: boolean;
 }
 
 export type TipoConta = 'corrente' | 'poupanca' | 'caixa' | 'investimento';
@@ -125,6 +129,10 @@ export interface Lancamento {
   baixa?: Baixa;
   /** boleto/PIX gerado para esta conta a receber (simulado na demonstração) */
   cobranca?: Cobranca;
+  /** aprovação do pagamento por um administrador (quando passa do limite da empresa) */
+  aprovacao?: { usuarioId: ID; em: ISODateTime };
+  /** cobranças abertas no WhatsApp para esta conta a receber */
+  cobrancasEnviadas?: { em: ISODateTime; usuarioId: ID; canal: 'whatsapp' }[];
   cancelado?: boolean;
   observacoes?: string;
   criadoEm: ISODateTime;

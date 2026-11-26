@@ -17,6 +17,8 @@ import { ImportarNotas } from './forms/ImportarNotas';
 import { PaletaComandos, type Comando } from './PaletaComandos';
 import { OrcamentoForm } from './forms/OrcamentoForm';
 import { CobrancaDialog } from './forms/CobrancaDialog';
+import { CobrarWhatsApp } from './forms/CobrarWhatsApp';
+import { ImportarPlanilha } from './forms/ImportarPlanilha';
 
 interface Api {
   novoLancamento: (preset: PresetLancamento) => void;
@@ -30,6 +32,8 @@ interface Api {
   novoOrcamento: (clienteId?: string) => void;
   editarOrcamento: (id: string) => void;
   verCobranca: (lancamentoId: string) => void;
+  cobrarWhatsApp: (lancamentoId: string) => void;
+  importarPlanilha: () => void;
 }
 
 const Ctx = createContext<Api | null>(null);
@@ -50,6 +54,8 @@ export function ProvedorAcoes({ children }: { children: ReactNode }) {
   const [paleta, setPaleta] = useState(false);
   const [orcamento, setOrcamento] = useState<{ editandoId?: string; clienteId?: string } | null>(null);
   const [cobranca, setCobranca] = useState<string | null>(null);
+  const [whatsapp, setWhatsapp] = useState<string | null>(null);
+  const [planilha, setPlanilha] = useState(false);
 
   const api = useMemo<Api>(
     () => ({
@@ -88,6 +94,14 @@ export function ProvedorAcoes({ children }: { children: ReactNode }) {
         setOrcamento({ editandoId: id });
       },
       verCobranca: (lancamentoId) => setCobranca(lancamentoId),
+      cobrarWhatsApp: (lancamentoId) => {
+        novaChave();
+        setWhatsapp(lancamentoId);
+      },
+      importarPlanilha: () => {
+        novaChave();
+        setPlanilha(true);
+      },
     }),
     [],
   );
@@ -102,6 +116,8 @@ export function ProvedorAcoes({ children }: { children: ReactNode }) {
     setImportar(null);
     setOrcamento(null);
     setCobranca(null);
+    setWhatsapp(null);
+    setPlanilha(false);
   }, [pathname]);
 
   // Atalhos: Ctrl+K / ⌘K e "/" abrem a paleta
@@ -129,6 +145,7 @@ export function ProvedorAcoes({ children }: { children: ReactNode }) {
       c.push({ id: 'novo-receber', titulo: 'Nova conta a receber', icone: 'receber', grupo: 'Ações', palavras: 'lancar receita venda', executar: () => api.novoLancamento({ tipo: 'receber' }) });
     }
     if (pode('importar')) c.push({ id: 'importar', titulo: 'Importar XML de nota fiscal', icone: 'enviar', grupo: 'Ações', palavras: 'nfe xml', executar: () => api.importarNotas() });
+    if (pode('importar')) c.push({ id: 'importar-planilha', titulo: 'Importar contas de uma planilha', icone: 'planilha', grupo: 'Ações', palavras: 'excel csv planilha importar contas', executar: () => api.importarPlanilha() });
     if (pode('contatos')) c.push({ id: 'novo-contato', titulo: 'Cadastrar cliente ou fornecedor', icone: 'contatos', grupo: 'Ações', palavras: 'cnpj contato', executar: () => api.novoContato() });
     return c;
   }, [api, pode]);
@@ -170,6 +187,10 @@ export function ProvedorAcoes({ children }: { children: ReactNode }) {
         aoEditar={(id) => api.editarLancamento(id)}
         aoBaixar={(ids) => api.darBaixa(ids, () => setDetalhe((d) => (d ? { ...d, recemPago: true } : d)))}
         aoDuplicar={duplicar}
+        aoCobrarWhatsApp={(id) => {
+          setDetalhe(null);
+          api.cobrarWhatsApp(id);
+        }}
         aoCobrar={(id) => {
           try {
             gerarCobranca(id, usuario.id);
@@ -214,6 +235,10 @@ export function ProvedorAcoes({ children }: { children: ReactNode }) {
       )}
 
       <CobrancaDialog lancamentoId={cobranca} aoFechar={() => setCobranca(null)} />
+
+      {whatsapp && <CobrarWhatsApp key={`w${chave}`} lancamentoId={whatsapp} aoFechar={() => setWhatsapp(null)} />}
+
+      {planilha && <ImportarPlanilha key={`p${chave}`} aoFechar={() => setPlanilha(false)} />}
 
       <PaletaComandos aberta={paleta} aoFechar={() => setPaleta(false)} acoes={comandos} />
     </Ctx.Provider>

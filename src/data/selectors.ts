@@ -28,6 +28,25 @@ export function statusDe(l: Lancamento, ref: ISODate = hoje()): Status {
 
 export const emAberto = (l: Lancamento): boolean => !l.cancelado && !l.baixa;
 
+/** Pagamento acima do limite da empresa que ainda não foi aprovado por um administrador. */
+export function precisaAprovacao(db: Database, l: Lancamento): boolean {
+  const limite = db.empresa.limiteAprovacao ?? 0;
+  return l.tipo === 'pagar' && emAberto(l) && limite > 0 && l.valor >= limite && !l.aprovacao;
+}
+
+/** Identifica um título "igual" para não importar duas vezes (tipo, valor, vencimento e descrição). */
+export const chaveTitulo = (tipo: string, valor: number, vencimento: string, descricao: string): string =>
+  `${tipo}|${valor}|${vencimento}|${normalizarBusca(descricao)}`;
+
+/** Contas a receber para cobrar: atrasadas e as que vencem nos próximos dias (lembrete). */
+export function paraCobrar(db: Database, ref: ISODate = hoje(), diasAntes = 3): Lancamento[] {
+  const ate = addDias(ref, diasAntes);
+  return db.lancamentos
+    // sem cliente (ex.: fechamento do balcão) não há a quem cobrar
+    .filter((l) => l.tipo === 'receber' && emAberto(l) && !!l.contatoId && l.vencimento <= ate && !l.cobranca?.pagaEm)
+    .sort((a, b) => (a.vencimento < b.vencimento ? -1 : a.vencimento > b.vencimento ? 1 : b.valor - a.valor));
+}
+
 // ---------- Índices (memoizados por versão do banco) ----------
 
 export interface Indices {
@@ -215,18 +234,40 @@ export interface DiaFluxo {
   saldo: number;
 }
 
+/** Simulação "e se…?" do fluxo de caixa. Nada disso é gravado. */
+export interface Cenario {
+  /** título → nova data (null = sai da projeção, ex.: cliente que não vai pagar) */
+  mover?: Record<string, ISODate | null>;
+  /** movimentos hipotéticos: valor positivo entra, negativo sai */
+  extras?: { id: string; data: ISODate; valor: number; descricao: string }[];
+  /** recebimentos chegam X% menores (ex.: imposto retido no split payment) */
+  reducaoRecebimentosPct?: number;
+}
+
 /** Projeção dia a dia a partir do saldo de hoje. Vencidos em aberto entram no dia de hoje. */
-export function projecaoDiaria(db: Database, dias = 60, ref: ISODate = hoje()) {
+export function projecaoDiaria(db: Database, dias = 60, ref: ISODate = hoje(), cenario?: Cenario) {
   const inicial = saldoTotal(db, ref);
   const pontos: DiaFluxo[] = [];
   const mov = new Map<ISODate, { e: number; s: number }>();
+  const reducao = Math.min(100, Math.max(0, cenario?.reducaoRecebimentosPct ?? 0));
+  const somarMov = (data: ISODate, entrada: number, saida: number) => {
+    const d = data < ref ? ref : data;
+    const m = mov.get(d) ?? { e: 0, s: 0 };
+    m.e += entrada;
+    m.s += saida;
+    mov.set(d, m);
+  };
   for (const l of db.lancamentos) {
     if (!emAberto(l)) continue;
-    const d = l.vencimento < ref ? ref : l.vencimento;
-    const m = mov.get(d) ?? { e: 0, s: 0 };
-    if (l.tipo === 'receber') m.e += l.valor;
-    else m.s += l.valor;
-    mov.set(d, m);
+    const movido = cenario?.mover && l.id in cenario.mover ? cenario.mover[l.id] : undefined;
+    if (movido === null) continue;
+    const data = movido ?? l.vencimento;
+    if (l.tipo === 'receber') somarMov(data, reducao ? l.valor - Math.round((l.valor * reducao) / 100) : l.valor, 0);
+    else somarMov(data, 0, l.valor);
+  }
+  for (const x of cenario?.extras ?? []) {
+    if (x.valor > 0) somarMov(x.data, x.valor, 0);
+    else if (x.valor < 0) somarMov(x.data, 0, -x.valor);
   }
   let saldo = inicial;
   for (let i = 0; i < dias; i++) {
@@ -283,7 +324,13 @@ export interface Dre {
   despesas: LinhaDre[];
   totalReceitas: number[];
   totalDespesas: number[];
+  /** receitas − despesas (sem as retiradas dos sócios) */
   resultado: number[];
+  /** dinheiro que foi para os sócios (categorias marcadas como retirada) */
+  retiradas: LinhaDre[];
+  totalRetiradas: number[];
+  /** resultado − retiradas: o que ficou na empresa */
+  sobrou: number[];
 }
 
 export function dre(db: Database, meses: string[], regime: Regime): Dre {
@@ -299,11 +346,18 @@ export function dre(db: Database, meses: string[], regime: Regime): Dre {
     });
     return [...linhas.values()].sort((a, b) => b.total - a.total);
   };
+  const cats = indices(db).categorias;
+  const ehRetirada = (l: LinhaDre) => !!cats.get(l.categoriaId)?.retirada;
   const receitas = montar('receber');
-  const despesas = montar('pagar');
-  const totalReceitas = meses.map((_, i) => receitas.reduce((a, l) => a + l.valores[i], 0));
-  const totalDespesas = meses.map((_, i) => despesas.reduce((a, l) => a + l.valores[i], 0));
-  return { meses, receitas, despesas, totalReceitas, totalDespesas, resultado: meses.map((_, i) => totalReceitas[i] - totalDespesas[i]) };
+  const saidas = montar('pagar');
+  const despesas = saidas.filter((l) => !ehRetirada(l));
+  const retiradas = saidas.filter(ehRetirada);
+  const somaMes = (linhas: LinhaDre[]) => meses.map((_, i) => linhas.reduce((a, l) => a + l.valores[i], 0));
+  const totalReceitas = somaMes(receitas);
+  const totalDespesas = somaMes(despesas);
+  const totalRetiradas = somaMes(retiradas);
+  const resultado = meses.map((_, i) => totalReceitas[i] - totalDespesas[i]);
+  return { meses, receitas, despesas, totalReceitas, totalDespesas, resultado, retiradas, totalRetiradas, sobrou: meses.map((_, i) => resultado[i] - totalRetiradas[i]) };
 }
 
 // ---------- Painel "Hoje" ----------
@@ -320,7 +374,8 @@ export function briefing(db: Database, ref: ISODate = hoje()) {
   const vencidos = db.lancamentos
     .filter((l) => emAberto(l) && l.vencimento < ref)
     .sort((a, b) => (a.vencimento < b.vencimento ? -1 : 1));
-  return { pagar, receber, saldo: projecao.inicial, projecao, saldoFimMes, notasSemTitulo, sefazPendentes, vencidos };
+  const aprovar = db.lancamentos.filter((l) => precisaAprovacao(db, l)).sort((a, b) => (a.vencimento < b.vencimento ? -1 : 1));
+  return { pagar, receber, saldo: projecao.inicial, projecao, saldoFimMes, notasSemTitulo, sefazPendentes, vencidos, aprovar };
 }
 
 // ---------- Vendas do mês ----------

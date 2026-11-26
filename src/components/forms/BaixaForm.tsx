@@ -6,6 +6,10 @@ import { moeda, plural } from '../../lib/format';
 import { useDb } from '../../data/store';
 import { darBaixa, estornarBaixa } from '../../data/actions';
 import type { Lancamento } from '../../data/types';
+import { precisaAprovacao } from '../../data/selectors';
+import { conferirTitulo } from '../../data/conferencia';
+import { AlertasConferencia } from '../AlertasConferencia';
+import { Icone } from '../Icone';
 import { useUsuario } from '../../auth/auth';
 import { Camada } from '../Camada';
 import { AreaTexto, Botao, Caixa, Campo, Entrada, EntradaMoeda, Selecao } from '../ui';
@@ -26,6 +30,12 @@ export function BaixaForm({ aberta, aoFechar, titulos, aoConcluir }: { aberta: b
   const [obs, setObs] = useState('');
   const [ehParcial, setEhParcial] = useState(false);
   const [parcial, setParcial] = useState(0);
+  const [conferido, setConferido] = useState(false);
+
+  // regras antes de pagar: aprovação (bloqueia) e conferência do boleto (alerta grave pede confirmação)
+  const semAprovacao = tipo === 'pagar' ? titulos.filter((l) => precisaAprovacao(db, l)) : [];
+  const conferencias = tipo === 'pagar' ? titulos.map((l) => ({ l, alertas: conferirTitulo(db, l) })).filter((x) => x.alertas.length) : [];
+  const temGrave = conferencias.some((x) => x.alertas.some((a) => a.nivel === 'critico'));
 
   const principal = individual && ehParcial ? parcial : individual?.valor ?? total;
   const valorPago = principal + juros - desconto;
@@ -70,7 +80,7 @@ export function BaixaForm({ aberta, aoFechar, titulos, aoConcluir }: { aberta: b
           <Botao variante="fantasma" onClick={aoFechar}>
             Cancelar
           </Botao>
-          <Botao variante="primario" icone="carimbo" onClick={confirmar} disabled={valorPago <= 0 || parcialInvalido}>
+          <Botao variante="primario" icone="carimbo" onClick={confirmar} disabled={valorPago <= 0 || parcialInvalido || semAprovacao.length > 0 || (temGrave && !conferido)}>
             Confirmar {tipo === 'pagar' ? 'pagamento' : 'recebimento'}
           </Botao>
         </>
@@ -88,6 +98,35 @@ export function BaixaForm({ aberta, aoFechar, titulos, aoConcluir }: { aberta: b
           </div>
         )}
       </div>
+      {semAprovacao.length > 0 && (
+        <div className="aviso-caixa aviso-caixa--critico" style={{ marginTop: 16 }} role="alert">
+          <Icone nome="cadeado" />
+          <span>
+            <strong>{semAprovacao.length === 1 ? 'Esta conta ainda não foi aprovada.' : `${semAprovacao.length} contas ainda não foram aprovadas.`}</strong> Pagamentos a partir de{' '}
+            {moeda(db.empresa.limiteAprovacao ?? 0)} precisam do OK de um administrador
+            {!individual && ': tire-as da seleção ou peça a aprovação'}.
+          </span>
+        </div>
+      )}
+      {conferencias.length > 0 && (
+        <div className="baixa__conferencia">
+          {individual ? (
+            <AlertasConferencia alertas={conferencias[0].alertas} />
+          ) : (
+            conferencias.map(({ l, alertas }) => (
+              <div key={l.id}>
+                <p className="rotulo" style={{ margin: '0 0 6px' }}>
+                  {l.descricao}
+                </p>
+                <AlertasConferencia alertas={alertas} />
+              </div>
+            ))
+          )}
+          {temGrave && (
+            <Caixa rotulo="Conferi com o fornecedor (pelo telefone do cadastro) e quero pagar mesmo assim" checked={conferido} onChange={(e) => setConferido(e.target.checked)} />
+          )}
+        </div>
+      )}
       <div className="grade-form" style={{ marginTop: 18 }}>
         <Campo className="c3 m3" rotulo={`Data do ${tipo === 'pagar' ? 'pagamento' : 'recebimento'}`} htmlFor="b-data">
           <Entrada id="b-data" type="date" value={data} max={hoje()} onChange={(e) => setData(e.target.value)} />

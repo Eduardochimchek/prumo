@@ -136,6 +136,11 @@ export function AppShell() {
           Importar XML de nota
         </ItemMenu>
       )}
+      {pode('importar') && (
+        <ItemMenu icone="planilha" onClick={() => { fechar(); acoes.importarPlanilha(); }}>
+          Importar planilha
+        </ItemMenu>
+      )}
       {pode('contatos') && (
         <ItemMenu icone="contatos" onClick={() => { fechar(); acoes.novoContato(); }}>
           Cliente ou fornecedor
@@ -289,6 +294,7 @@ export function AppShell() {
               ['pagar', 'Conta a pagar', 'Boleto, aluguel, fornecedor…', () => acoes.novoLancamento({ tipo: 'pagar' }), pode('lancar')],
               ['receber', 'Conta a receber', 'Venda, serviço, parcela…', () => acoes.novoLancamento({ tipo: 'receber' }), pode('lancar')],
               ['enviar', 'Importar nota (XML)', 'Gera as contas pelas duplicatas', () => acoes.importarNotas(), pode('importar')],
+              ['planilha', 'Importar planilha', 'Traz as contas do Excel', () => acoes.importarPlanilha(), pode('importar')],
               ['contatos', 'Cliente ou fornecedor', 'Busca o CNPJ na Receita', () => acoes.novoContato(), pode('contatos')],
             ] as const
           )

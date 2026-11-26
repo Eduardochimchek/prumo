@@ -41,10 +41,14 @@ npm run verificar    # typecheck + test + build + smoke (rode antes de cada comm
 - **Sentido da nota pelo CNPJ da empresa** (`direcaoDaNota`): destinatário = entrada/compra → contas a pagar; emitente = saída/venda → contas a receber.
 - Notas autorizadas geram títulos pelas **duplicatas** (`<cobr><dup>`); sem duplicata, um título à vista.
 - **Venda**: `orcamento` → `pedido` (aprovado) → `faturada` (nota emitida) ou `recusada`. Só `emitirNotaDoPedido` emite nota; ela gera as contas a receber pela condição de pagamento (a última parcela leva a diferença de centavos). Nota de venda emitida pelo Prumo tem `origem: 'emitida'` e `vendaId`, e não pode ser excluída.
+- **Aprovação de pagamentos**: com `empresa.limiteAprovacao` ligado, conta a pagar de valor ≥ limite só tem baixa depois de `aprovarPagamentos` (só administrador; checado em `actions.ts`, não só na tela). Mudar valor, boleto, fornecedor ou forma tira a aprovação. Derive com `precisaAprovacao()`.
+- **Conferência antes de pagar** (`src/data/conferencia.ts`): boleto repetido/já pago, valor ou vencimento diferente da nota, banco que o fornecedor nunca usou, conta repetida. Alerta `critico` exige confirmação no `BaixaForm`. Leitura pura; não grave o resultado.
+- **Cobrança pelo WhatsApp**: só link `wa.me` aberto pelo usuário (nada sai por servidor). Na demonstração (`db.demo`) o link vai **sem telefone** (os números são inventados). Registre com `registrarCobrancaEnviada`.
+- **Retirada dos sócios**: categoria de despesa com `retirada: true` fica fora das despesas no DRE (`dre().retiradas`, `sobrou`).
 - **Simulação visível**: tudo o que é de mentira na demonstração (NF-e emitida, boleto/PIX, pagamento simulado, SEFAZ) mostra o selo `.selo-simulacao`. Integração real entra atrás de `ProvedorFiscal`/`ProvedorSefaz`, sem mudar as telas.
 - Toda escrita passa por `src/data/actions.ts` (valida regra, grava com `atualizar()`, registra `Atividade`). **Componentes não alteram o banco diretamente.**
 - Leituras derivadas ficam em `src/data/selectors.ts` (puras, sem efeitos). Derive com `useMemo` a partir de `useDb()`.
-- Permissões por papel em `src/auth/auth.tsx` (`pode('lancar' | 'baixar' | 'importar' | 'contatos' | 'usuarios' | 'config')`). Toda ação nova precisa de checagem na UI **e** a regra correspondente documentada.
+- Permissões por papel em `src/auth/auth.tsx` (`pode('lancar' | 'baixar' | 'importar' | 'contatos' | 'usuarios' | 'config' | 'aprovar')`). Toda ação nova precisa de checagem na UI **e** a regra correspondente documentada.
 - Base de demonstração (`seed.ts`) é **determinística e relativa a hoje**: use só o gerador `aleatorio(semente)`; nada de `Math.random`, `Date.now` em valores, nem `sort(() => random)` (o resultado muda entre navegadores, use `r.embaralhar`). Nomes, CNPJs e valores são fictícios.
 - Mudou o formato do banco? Incremente `VERSAO_BANCO` em `store.ts` e trate a migração (hoje a versão incompatível recria a demonstração).
 
@@ -98,6 +102,11 @@ npm run verificar    # typecheck + test + build + smoke (rode antes de cada comm
 | `src/services/fiscal.ts` | Interface `ProvedorFiscal` (emitir NF-e) + emissor simulado |
 | `src/data/vendas.ts` | Totais da venda, condições de pagamento e vencimentos das parcelas |
 | `src/lib/pix.ts` | PIX copia e cola (BR Code EMV + CRC16) |
+| `src/data/conferencia.ts` | Conferência do boleto/conta antes de pagar (antifraude e repetição) |
+| `src/lib/cobranca.ts` | Mensagem de cobrança e link do WhatsApp |
+| `src/lib/planilha.ts` | Ler planilha colada/CSV (valores e datas BR, colunas sugeridas) |
+| `src/components/Painel.tsx` | Painel de números (classe `.numeros`) |
+| `src/components/Simulador.tsx` | Simulador “E se…?” do fluxo de caixa |
 | `src/pages/Vendas.tsx`, `VendaDetalhe.tsx`, `Produtos.tsx` | Faturamento: orçamento → pedido → nota; cadastro de produtos e serviços |
 | `src/components/Acoes.tsx` | Central de diálogos globais (novo lançamento, baixa, detalhe, contato, importar, orçamento, cobrança, paleta) |
 | `src/layout/AppShell.tsx` | Cabeçalho desktop + navegação do celular |
@@ -118,5 +127,6 @@ npm run verificar    # typecheck + test + build + smoke (rode antes de cada comm
 
 1. Backend (V2): API Node + PostgreSQL implementando `types.ts`; trocar `store.ts` por cliente HTTP; autenticação com Argon2id e sessão httpOnly; multiempresa.
 2. SEFAZ real (ver `docs/SEFAZ.md`): certificado A1 no servidor, Distribuição DF-e por NSU, manifestação, guardar XML.
-3. Conciliação bancária (OFX/CNAB) e transferências entre contas.
-4. Cobrança (lembretes, boleto/PIX via banco), centros de custo, aprovação em alçadas.
+3. Conciliação bancária (OFX/CNAB/Open Finance), DDA e transferências entre contas.
+4. Cobrança automática (régua de lembretes, boleto/PIX via banco, Pix Automático), centros de custo, alçadas em mais de um nível.
+5. Estoque está **fora do escopo** até o Reginaldo decidir (pedido em aberto desde nov/2026).

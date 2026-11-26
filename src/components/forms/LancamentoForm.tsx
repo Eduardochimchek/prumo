@@ -14,6 +14,8 @@ import { Camada } from '../Camada';
 import { Icone } from '../Icone';
 import { AreaTexto, Botao, Campo, Entrada, EntradaMoeda, Segmentado, Selecao } from '../ui';
 import { useAvisos } from '../Avisos';
+import { conferirPagamento } from '../../data/conferencia';
+import { AlertasConferencia } from '../AlertasConferencia';
 
 export const FORMAS: { valor: FormaPagamento; rotulo: string }[] = [
   { valor: 'boleto', rotulo: 'Boleto' },
@@ -71,6 +73,20 @@ export function LancamentoForm({
   const [tentou, setTentou] = useState(false);
 
   const boleto = useMemo(() => (linha.replace(/\D/g, '').length >= 44 ? lerBoleto(linha) : null), [linha]);
+  // conferência antes de pagar, ao vivo: boleto repetido, banco trocado, valor diferente da nota, conta repetida
+  const alertas = useMemo(
+    () =>
+      conferirPagamento(db, {
+        tipo,
+        valor,
+        vencimento,
+        linha: linha.replace(/\D/g, '') || undefined,
+        contatoId: contatoId || undefined,
+        notaId: base?.notaId,
+        id: base?.id,
+      }),
+    [db, tipo, valor, vencimento, linha, contatoId, base?.notaId, base?.id],
+  );
 
   const contatos = useMemo(
     () =>
@@ -226,6 +242,8 @@ export function LancamentoForm({
           </div>
         )}
 
+        {alertas.length > 0 && <AlertasConferencia alertas={alertas} />}
+
         <Campo rotulo="Descrição" erro={tentou ? erros.descricao : null} htmlFor="f-desc">
           <Entrada id="f-desc" autoFocus value={descricao} onChange={(e) => setDescricao(e.target.value)} placeholder={tipo === 'pagar' ? 'Ex.: Aluguel da loja · dezembro' : 'Ex.: Venda para Construtora Laje Forte'} />
         </Campo>
@@ -273,7 +291,12 @@ export function LancamentoForm({
           </div>
         </Campo>
 
-        <Campo className="c3" rotulo="Categoria" htmlFor="f-cat">
+        <Campo
+          className="c3"
+          rotulo="Categoria"
+          htmlFor="f-cat"
+          dica={db.categorias.find((c) => c.id === categoriaId)?.retirada ? 'Retirada do sócio: fica fora das despesas no resultado (DRE), para mostrar o lucro de verdade.' : undefined}
+        >
           <Selecao id="f-cat" value={categoriaId} onChange={(e) => setCategoriaId(e.target.value)}>
             <option value="">Sem categoria</option>
             {categorias.map((c) => (

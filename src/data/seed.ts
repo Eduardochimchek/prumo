@@ -121,6 +121,8 @@ export function criarBaseDemo(ref: ISODate = hoje()): Database {
     uf: 'RS',
     municipio: 'Porto Alegre',
     regime: 'simples' as const,
+    // pagamentos a partir de R$ 5.000 precisam do OK de um administrador
+    limiteAprovacao: 500_000,
   };
 
   // ---------- Usuários (senhas de demonstração documentadas no README) ----------
@@ -210,7 +212,9 @@ export function criarBaseDemo(ref: ISODate = hoje()): Database {
     marketing: cat('Marketing', 'despesa'),
     tarifas: cat('Tarifas bancárias', 'despesa'),
     administrativas: cat('Despesas administrativas', 'despesa'),
+    retirada: cat('Retirada dos sócios', 'despesa'),
   };
+  categorias.find((c) => c.id === C.retirada)!.retirada = true;
 
   // ---------- Contas bancárias ----------
   const contas: ContaBancaria[] = [
@@ -610,6 +614,12 @@ export function criarBaseDemo(ref: ISODate = hoje()): Database {
     lanc({ tipo: 'receber', descricao: 'Rendimento da aplicação automática', categoriaId: C.rendimentos, valor: r.varia(26_000, 0.25), vencimento: diaDoMes(mk, 31), forma: 'transferencia', conta: banrisul });
   }
 
+  // ---------- Retirada mensal do sócio (fica fora das despesas no DRE) ----------
+  for (const mk of meses) {
+    const venc = nDiaUtil(mk, 10);
+    lanc({ tipo: 'pagar', descricao: `Retirada do sócio · ${mesCurto(mk)}`, categoriaId: C.retirada, valor: 400_000, vencimento: venc, emissao: venc, forma: 'transferencia', conta: banrisul });
+  }
+
   // ---------- Baixas: o passado está quitado, com algumas exceções realistas ----------
   const emAberto = new Set<string>();
   // Contas a pagar esquecidas (sempre as mesmas, para o painel ter o que mostrar)
@@ -652,6 +662,50 @@ export function criarBaseDemo(ref: ISODate = hoje()): Database {
       usuarioId: quemBaixa(),
       registradaEm: momento(data, 9 + r.inteiro(0, 8), r.inteiro(0, 59)),
     };
+  }
+
+  // ---------- Conferência antes de pagar: dois boletos que o Prumo deve barrar ----------
+  // 1) Boleto da Vale do Sinos vindo de um banco que ela nunca usou (golpe do boleto adulterado)
+  const vencGolpe = proximoDiaUtil(addDias(ref, 3));
+  lanc({
+    tipo: 'pagar',
+    descricao: 'Mercadorias · pedido 4471 (Vale do Sinos Ferragens)',
+    contato: F.ferragens,
+    categoriaId: C.mercadorias,
+    valor: 386_540,
+    vencimento: vencGolpe,
+    emissao: addDias(ref, -2),
+    forma: 'boleto',
+    documento: 'Pedido 4471 · boleto recebido por e-mail',
+    linhaDigitavel: gerarLinhaDigitavel('336', vencGolpe, 386_540, r.digitos(25)),
+  });
+  // 2) Boleto lançado à mão que é a mesma parcela de uma NF já importada (seria pago duas vezes)
+  const parcelaNota = lancamentos
+    .filter((l) => l.tipo === 'pagar' && l.notaId && !l.baixa && !l.cancelado && l.vencimento > addDias(ref, 5) && l.valor < empresa.limiteAprovacao)
+    .sort((a, b) => (a.vencimento < b.vencimento ? -1 : 1))[0];
+  if (parcelaNota) {
+    const forn = contatos.find((c) => c.id === parcelaNota.contatoId)!;
+    const bancoHabitual = parcelaNota.linhaDigitavel?.slice(0, 3) ?? '237';
+    lanc({
+      tipo: 'pagar',
+      descricao: `Boleto ${forn.fantasia ?? forn.nome} (recebido por e-mail)`,
+      contato: forn,
+      categoriaId: C.mercadorias,
+      valor: parcelaNota.valor,
+      vencimento: parcelaNota.vencimento,
+      emissao: addDias(ref, -1),
+      forma: 'boleto',
+      linhaDigitavel: gerarLinhaDigitavel(bancoHabitual, parcelaNota.vencimento, parcelaNota.valor, r.digitos(25)),
+    });
+  }
+
+  // ---------- Aprovação: o que passa de R$ 5.000 já foi aprovado, menos as duas próximas ----------
+  const acimaDoLimite = lancamentos
+    .filter((l) => l.tipo === 'pagar' && !l.baixa && !l.cancelado && l.valor >= empresa.limiteAprovacao)
+    .sort((a, b) => (a.vencimento < b.vencimento ? -1 : 1));
+  const esperando = new Set(acimaDoLimite.filter((l) => l.vencimento >= ref).slice(0, 2).map((l) => l.id));
+  for (const l of acimaDoLimite) {
+    if (!esperando.has(l.id)) l.aprovacao = { usuarioId: uReginaldo.id, em: l.criadoEm };
   }
 
   // Uma venda cancelada (NF cancelada => títulos cancelados)
@@ -751,6 +805,10 @@ export function criarBaseDemo(ref: ISODate = hoje()): Database {
   };
   const sefaz: ResumoSefaz[] = [resumo(F.tintas, 0, 734_000), resumo(F.madeira, 1, 1_298_050), resumo(F.cimento, 2, 411_520)];
 
+  // Ana já cobrou um dos clientes atrasados pelo WhatsApp
+  const atrasadoCobrado = lancamentos.find((l) => l.tipo === 'receber' && !l.baixa && !l.cancelado && l.vencimento < ref && l.contatoId);
+  if (atrasadoCobrado) atrasadoCobrado.cobrancasEnviadas = [{ em: momento(addDias(ref, -2), 10, 15), usuarioId: uAna.id, canal: 'whatsapp' }];
+
   // ---------- Atividade recente ----------
   const nomeCurto = (u: Usuario) => u.nome.split(' ')[0];
   const recentes = lancamentos
@@ -788,7 +846,7 @@ export function criarBaseDemo(ref: ISODate = hoje()): Database {
   atividades.sort((a, b) => (b.em > a.em ? 1 : -1));
 
   return {
-    versao: 2,
+    versao: 3,
     criadoEm: new Date().toISOString(),
     demo: true,
     empresa,

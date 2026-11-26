@@ -30,11 +30,13 @@ Ver a lista completa no [README](../README.md#o-que-a-v1-já-faz). Em resumo: pa
 
 **Demonstração de faturamento (nov/2026):** produtos e serviços, orçamento → pedido → NF-e simulada → contas a receber parceladas → boleto/PIX simulado com baixa automática. Serve para mostrar o fluxo completo e ouvir o dono antes da V2; a emissão real entra pela interface `ProvedorFiscal` (Fase 3 do plano SaaS).
 
+**Novidades de nov/2026 (a partir da pesquisa de mercado):** conferência do boleto antes de pagar (repetido, já pago, valor diferente da nota, banco trocado), aprovação de pagamentos acima de um valor, cobrança pelo WhatsApp com mensagem pronta, importação de planilha (copiar e colar do Excel), simulador “E se…?” no fluxo de caixa e retiradas dos sócios separadas no DRE.
+
 **Fora do escopo de propósito:** contabilidade (partidas dobradas, SPED), folha de pagamento, estoque, apuração de impostos. O Prumo conversa com quem faz isso (contador, ERP de estoque), não compete.
 
 ## Princípios
 
-1. **O sistema escreve, a pessoa decide.** Em vez de 12 cartões de número, frases: “Duas contas a pagar estão vencidas (R$ 3.134,60)”.
+1. **Número antes de texto.** O que importa aparece como número grande, com cor e rótulo, e leva à lista certa (pedido do Reginaldo, nov/2026: “muita informação escrita”).
 2. **Uma ação comum = um toque.** Dar baixa, lançar, importar nota, buscar (Ctrl+K).
 3. **Nada some.** Cancelar em vez de apagar, estorno com histórico, “Desfazer” logo após a ação, trilha de atividade.
 4. **Celular de verdade**, não “versão reduzida”.
@@ -46,12 +48,13 @@ Ver a lista completa no [README](../README.md#o-que-a-v1-já-faz). Em resumo: pa
 - Backend + banco de dados na nuvem; login seguro; dados compartilhados entre usuários e aparelhos; **multiempresa** (escritórios que atendem várias empresas).
 - **SEFAZ real** com certificado A1: notas emitidas contra o CNPJ chegam sozinhas, manifestação, situação da nota, XML guardado e DANFE em PDF.
 - **Conciliação bancária** (OFX/CNAB) e transferências entre contas.
-- Cobrança: lembretes automáticos (e-mail/WhatsApp), boleto e PIX via banco.
+- Cobrança: régua de lembretes automática (e-mail/WhatsApp), boleto e PIX via banco, Pix Automático.
+- DDA e extrato pelo Open Finance (boletos e movimentos chegam sozinhos).
 - Anexos (comprovantes, boletos em PDF) nos títulos.
 
 ### V3: produto
-- Assinatura e planos, onboarding guiado, importação de planilhas.
-- Centros de custo, orçamento × realizado, aprovação de pagamentos por alçada.
+- Assinatura e planos, onboarding guiado.
+- Centros de custo, orçamento × realizado, alçadas de aprovação em mais de um nível.
 - NFS-e (padrão nacional), campos de IBS/CBS da reforma tributária.
 - Portal do contador; integrações com ERPs de estoque.
 
@@ -59,7 +62,8 @@ Ver a lista completa no [README](../README.md#o-que-a-v1-já-faz). Em resumo: pa
 
 - **Assinatura mensal por empresa**, com faixas por número de usuários e de notas/mês.
 - Plano para **escritórios de BPO financeiro e contabilidades** (multiempresa), cobrado por empresa atendida.
-- Diferenciais para vender: painel que “conversa”, leitura de boleto e XML que poupa digitação, SEFAZ automática, funciona no celular, visual que não parece sistema antigo.
+- Diferenciais para vender: só o financeiro (sem pagar por um ERP inteiro), nota que vira conta sozinha, conferência do boleto contra golpe, previsão de caixa com simulador, cobrança pelo WhatsApp, funciona no celular, visual que não parece sistema antigo.
+- O que as reclamações dos concorrentes ensinam sobre preço (Reclame Aqui, 2026): reajuste alto na renovação, plano só anual, cancelamento difícil e preço que sobe com o faturamento. O Prumo deve ter plano mensal, sem fidelidade, cancelamento em um clique e preço claro.
 - Concorrentes conhecidos no Brasil para estudar posicionamento e preço: Conta Azul, Omie, Nibo, Granatum, Bling, Tiny, Asaas (cobrança). O Prumo não precisa ganhar em tudo: ganha em **simplicidade, notas fiscais e previsão de caixa**.
 
 ## Como medir se está dando certo

@@ -6,7 +6,7 @@ import { BANCOS, bancoPorCodigo, cnpjValido, mascaraCnpj, mascaraTelefone, norma
 import { baixarArquivo, lerArquivoTexto, LIMITE_BACKUP_BYTES } from '../lib/util';
 import { apagarDadosDoAparelho, exportarBackup, restaurarDemonstracao, substituirBanco, useDb, validarBackup } from '../data/store';
 import { saldoConta } from '../data/selectors';
-import { editarMeuPerfil, excluirCategoria, excluirMinhaConta, exportarMeusDados, salvarCategoria, salvarContaBancaria, salvarEmpresa, trocarPropriaSenha, zerarDados } from '../data/actions';
+import { definirLimiteAprovacao, definirRetirada, editarMeuPerfil, excluirCategoria, excluirMinhaConta, exportarMeusDados, salvarCategoria, salvarContaBancaria, salvarEmpresa, trocarPropriaSenha, zerarDados } from '../data/actions';
 import type { ContaBancaria, Empresa, Regime, TipoCategoria, TipoConta } from '../data/types';
 import { NOME_PAPEL, useAuth, useUsuario } from '../auth/auth';
 import { consultarCnpj } from '../services/brasilapi';
@@ -215,6 +215,66 @@ function AbaContas() {
   );
 }
 
+function AbaAprovacao() {
+  const db = useDb();
+  const usuario = useUsuario();
+  const { pode } = useAuth();
+  const { avisar, erro } = useAvisos();
+  const atual = db.empresa.limiteAprovacao ?? 0;
+  const [ligado, setLigado] = useState(atual > 0);
+  const [valor, setValor] = useState(atual || 500_000);
+  const editavel = pode('aprovar');
+  const novo = ligado ? valor : 0;
+  const esperando = db.lancamentos.filter((l) => l.tipo === 'pagar' && !l.baixa && !l.cancelado && !l.aprovacao && novo > 0 && l.valor >= novo).length;
+
+  return (
+    <section className="config__secao">
+      <h3 className="detalhe__h3">Aprovação de pagamentos</h3>
+      <p className="muted" style={{ fontSize: 14, margin: '0 0 12px', maxWidth: '62ch' }}>
+        Pagamento grande só sai depois do OK de um administrador. Protege contra boleto falso e erro de digitação: quem lança não é quem libera. Se o valor ou o boleto mudar depois da
+        aprovação, ela cai e precisa ser feita de novo.
+      </p>
+      <form
+        className="grade-form config__form"
+        onSubmit={(e) => {
+          e.preventDefault();
+          try {
+            definirLimiteAprovacao(novo, usuario.id);
+            avisar(novo ? `Pagamentos a partir de ${moeda(novo)} agora precisam de aprovação.` : 'Aprovação de pagamentos desligada.');
+          } catch (er) {
+            erro(er);
+          }
+        }}
+      >
+        <div>
+          <Caixa rotulo="Exigir aprovação de um administrador" checked={ligado} disabled={!editavel} onChange={(e) => setLigado(e.target.checked)} />
+        </div>
+        {ligado && (
+          <Campo
+            className="c3"
+            rotulo="Para pagamentos a partir de"
+            htmlFor="a-limite"
+            dica={novo > 0 && novo !== atual && esperando ? `${plural(esperando, 'conta em aberto vai', 'contas em aberto vão')} passar a esperar aprovação.` : undefined}
+          >
+            <EntradaMoeda id="a-limite" valor={valor} aoMudar={setValor} disabled={!editavel} />
+          </Campo>
+        )}
+        {editavel ? (
+          <div>
+            <Botao type="submit" icone="check" disabled={(ligado && valor <= 0) || novo === atual}>
+              Salvar aprovação
+            </Botao>
+          </div>
+        ) : (
+          <p className="muted" style={{ fontSize: 13 }}>
+            Só administradores mudam esta regra.
+          </p>
+        )}
+      </form>
+    </section>
+  );
+}
+
 function AbaCategorias() {
   const db = useDb();
   const usuario = useUsuario();
@@ -228,6 +288,12 @@ function AbaCategorias() {
       {(['receita', 'despesa'] as TipoCategoria[]).map((tipo) => (
         <section key={tipo}>
           <h3 className="detalhe__h3">{tipo === 'receita' ? 'Receitas' : 'Despesas'}</h3>
+          {tipo === 'despesa' && (
+            <p className="muted" style={{ fontSize: 13, margin: '-4px 0 10px', maxWidth: '62ch' }}>
+              Marque como <strong>retirada</strong> o dinheiro que vai para os sócios (lucro retirado, conta pessoal paga pela empresa). No resultado (DRE) ele fica fora das
+              despesas, para mostrar quanto a empresa lucrou e quanto sobrou depois das retiradas.
+            </p>
+          )}
           <ul className="categorias__lista">
             {db.categorias
               .filter((c) => c.tipo === tipo)
@@ -235,10 +301,34 @@ function AbaCategorias() {
                 const n = uso(c.id);
                 return (
                   <li key={c.id}>
-                    <span>{c.nome}</span>
+                    <span>
+                      {c.nome}
+                      {c.retirada && !pode('config') && (
+                        <>
+                          {' '}
+                          <CarimboTexto variante="latao">Retirada</CarimboTexto>
+                        </>
+                      )}
+                    </span>
                     <span className="muted num" style={{ fontSize: 12.5 }}>
                       {plural(n, 'lançamento', 'lançamentos')}
                     </span>
+                    {tipo === 'despesa' && pode('config') && (
+                      <Caixa
+                        rotulo="Retirada"
+                        aria-label={`${c.nome}: é retirada dos sócios`}
+                        title="Dinheiro que vai para o sócio: fica fora das despesas no DRE"
+                        checked={!!c.retirada}
+                        onChange={(e) => {
+                          try {
+                            definirRetirada(c.id, e.target.checked, usuario.id);
+                            avisar(e.target.checked ? `“${c.nome}” agora conta como retirada dos sócios.` : `“${c.nome}” voltou a ser despesa.`);
+                          } catch (er) {
+                            erro(er);
+                          }
+                        }}
+                      />
+                    )}
                     {pode('config') && (
                       <Botao
                         tam="p"
@@ -711,7 +801,12 @@ export function Configuracoes() {
           </button>
         ))}
       </div>
-      {aba === 'empresa' && <AbaEmpresa />}
+      {aba === 'empresa' && (
+        <>
+          <AbaEmpresa />
+          <AbaAprovacao />
+        </>
+      )}
       {aba === 'contas' && <AbaContas />}
       {aba === 'categorias' && <AbaCategorias />}
       {aba === 'sefaz' && <AbaSefaz />}

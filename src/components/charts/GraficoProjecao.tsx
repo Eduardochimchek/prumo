@@ -9,12 +9,13 @@ import { ticksRedondos, useLargura } from './useLargura';
 
 const M = { topo: 26, esq: 56, dir: 18, base: 30 };
 
-export function GraficoProjecao({ pontos, menor, altura = 260 }: { pontos: DiaFluxo[]; menor: DiaFluxo; altura?: number }) {
+/** `comparar`: a projeção sem a simulação, desenhada tracejada para ver a diferença. */
+export function GraficoProjecao({ pontos, menor, altura = 260, comparar }: { pontos: DiaFluxo[]; menor: DiaFluxo; altura?: number; comparar?: DiaFluxo[] }) {
   const [ref, largura] = useLargura<HTMLDivElement>();
   const [foco, setFoco] = useState<number | null>(null);
   if (pontos.length < 2) return null;
 
-  const valores = pontos.map((p) => p.saldo);
+  const valores = [...pontos, ...(comparar ?? [])].map((p) => p.saldo);
   const vMin = Math.min(0, ...valores);
   const vMax = Math.max(...valores);
   const folga = (vMax - vMin) * 0.12 || 1;
@@ -30,6 +31,11 @@ export function GraficoProjecao({ pontos, menor, altura = 260 }: { pontos: DiaFl
   let linha = `M${x(0)},${y(pontos[0].saldo)}`;
   for (let i = 1; i < pontos.length; i++) linha += ` H${x(i)} V${y(pontos[i].saldo)}`;
   const area = `${linha} V${y(lo)} H${x(0)} Z`;
+  let linhaComparar = '';
+  if (comparar && comparar.length === pontos.length) {
+    linhaComparar = `M${x(0)},${y(comparar[0].saldo)}`;
+    for (let i = 1; i < comparar.length; i++) linhaComparar += ` H${x(i)} V${y(comparar[i].saldo)}`;
+  }
 
   const iMenor = pontos.findIndex((p) => p.data === menor.data);
   const semanas = pontos.map((p, i) => ({ p, i })).filter(({ i }) => i % 7 === 0);
@@ -59,6 +65,7 @@ export function GraficoProjecao({ pontos, menor, altura = 260 }: { pontos: DiaFl
           </text>
         ))}
         <path d={area} fill="var(--tinta)" opacity="0.07" />
+        {linhaComparar && <path d={linhaComparar} fill="none" stroke="var(--tinta-3)" strokeWidth="1.5" strokeDasharray="5 4" strokeLinejoin="round" />}
         <path d={linha} fill="none" stroke="var(--tinta)" strokeWidth="2" strokeLinejoin="round" />
 
         {iMenor >= 0 && (
@@ -92,10 +99,18 @@ export function GraficoProjecao({ pontos, menor, altura = 260 }: { pontos: DiaFl
           <div className="dica__titulo">{foco === 0 ? 'hoje' : dataExtenso(addDias(pontos[0].data, foco), false)}</div>
           <div className="dica__linha">
             <span className="dica__chave">
-              <i style={{ background: 'var(--tinta)' }} /> Saldo previsto
+              <i style={{ background: 'var(--tinta)' }} /> {comparar ? 'Com a simulação' : 'Saldo previsto'}
             </span>
             <strong>{moeda(f.saldo)}</strong>
           </div>
+          {comparar && comparar[foco] && (
+            <div className="dica__linha">
+              <span className="dica__chave">
+                <i style={{ background: 'var(--tinta-3)' }} /> Sem a simulação
+              </span>
+              <strong>{moeda(comparar[foco].saldo)}</strong>
+            </div>
+          )}
           {f.entradas > 0 && (
             <div className="dica__linha">
               <span className="dica__chave">

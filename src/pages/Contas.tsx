@@ -7,16 +7,20 @@ import { contem, moeda, plural } from '../lib/format';
 import { gerarCsv, baixarArquivo } from '../lib/util';
 import { mascaraDocumento } from '../lib/br';
 import { useDb } from '../data/store';
-import { indices, resumoTipo, statusDe, type Status } from '../data/selectors';
+import { indices, precisaAprovacao, resumoTipo, statusDe, type Status } from '../data/selectors';
+import { conferirTitulo } from '../data/conferencia';
+import { aprovarPagamentos } from '../data/actions';
+import { useAvisos } from '../components/Avisos';
+import { useUsuario } from '../auth/auth';
 import type { Lancamento, TipoLancamento } from '../data/types';
 import { useAuth } from '../auth/auth';
 import { useAcoes } from '../components/Acoes';
 import { Icone } from '../components/Icone';
 import { Painel } from '../components/Painel';
-import { Botao, Caixa, Carimbo, Entrada, Segmentado, Selecao, Vazio } from '../components/ui';
+import { Botao, Caixa, Carimbo, CarimboTexto, Entrada, Segmentado, Selecao, Vazio } from '../components/ui';
 import { FORMAS } from '../components/forms/LancamentoForm';
 
-type Periodo = 'abertos' | 'vencidos' | '7d' | '30d' | 'mes' | 'quitados' | 'todos' | 'dia';
+type Periodo = 'abertos' | 'vencidos' | '7d' | '30d' | 'mes' | 'quitados' | 'todos' | 'dia' | 'aprovar';
 
 const NOMES_STATUS: Record<Status, string> = { pago: 'Quitado', vencido: 'Vencido', hoje: 'Vence hoje', aberto: 'Em aberto', cancelado: 'Cancelado' };
 
@@ -31,6 +35,8 @@ function ContasTipo({ tipo }: { tipo: TipoLancamento }) {
   const db = useDb();
   const { pode } = useAuth();
   const acoes = useAcoes();
+  const usuario = useUsuario();
+  const { avisar, erro } = useAvisos();
   const [params, setParams] = useSearchParams();
   const ref = hoje();
   const idx = indices(db);
@@ -42,6 +48,12 @@ function ContasTipo({ tipo }: { tipo: TipoLancamento }) {
   const [categoria, setCategoria] = useState('');
   const [selecao, setSelecao] = useState<Set<string>>(new Set());
   const dia = params.get('de');
+
+  // já na tela e chegou por um link com outro ?periodo= (ex.: "Para aprovar" do painel Hoje): segue o link
+  const periodoDoLink = params.get('periodo') as Periodo | null;
+  useEffect(() => {
+    if (periodoDoLink && !params.get('de')) setPeriodo(periodoDoLink);
+  }, [periodoDoLink]); // de propósito: só quando o link muda
 
   // ?id=… abre o detalhe (links da busca e de outras telas)
   useEffect(() => {
@@ -73,15 +85,18 @@ function ContasTipo({ tipo }: { tipo: TipoLancamento }) {
         return st === 'pago' && !!l.baixa && l.baixa.data >= addDias(ref, -90);
       case 'dia':
         return l.vencimento === dia && st !== 'cancelado';
+      case 'aprovar':
+        return precisaAprovacao(db, l);
       default:
         return true;
     }
   };
 
   const contagens = useMemo(() => {
-    const c: Record<Periodo, number> = { abertos: 0, vencidos: 0, '7d': 0, '30d': 0, mes: 0, quitados: 0, todos: doTipo.length, dia: 0 };
+    const c: Record<Periodo, number> = { abertos: 0, vencidos: 0, '7d': 0, '30d': 0, mes: 0, quitados: 0, todos: doTipo.length, dia: 0, aprovar: 0 };
     for (const l of doTipo) {
       const st = statusDe(l, ref);
+      if (precisaAprovacao(db, l)) c.aprovar++;
       if (st === 'aberto' || st === 'vencido' || st === 'hoje') c.abertos++;
       if (st === 'vencido') c.vencidos++;
       if ((st === 'aberto' || st === 'hoje' || st === 'vencido') && l.vencimento <= addDias(ref, 6)) c['7d']++;
@@ -90,7 +105,7 @@ function ContasTipo({ tipo }: { tipo: TipoLancamento }) {
       if (st === 'pago' && l.baixa && l.baixa.data >= addDias(ref, -90)) c.quitados++;
     }
     return c;
-  }, [doTipo, ref]);
+  }, [doTipo, ref, db]);
 
   const lista = useMemo(() => {
     const filtrados = doTipo.filter(filtroPeriodo).filter((l) => {
@@ -131,8 +146,17 @@ function ContasTipo({ tipo }: { tipo: TipoLancamento }) {
     return g;
   }, [lista, periodo, ref]);
 
+  // boletos com alerta grave (banco trocado, já pago, valor diferente da nota): selo "conferir" na linha
+  const paraConferir = useMemo(() => {
+    const ids = new Set<string>();
+    if (!pagar) return ids;
+    for (const l of lista) if (!l.baixa && !l.cancelado && conferirTitulo(db, l, ref).some((a) => a.nivel === 'critico')) ids.add(l.id);
+    return ids;
+  }, [lista, db, pagar, ref]);
+
   const selecionados = lista.filter((l) => selecao.has(l.id));
-  const baixaveis = selecionados.filter((l) => !l.baixa && !l.cancelado);
+  const esperandoAprovacao = selecionados.filter((l) => precisaAprovacao(db, l));
+  const baixaveis = selecionados.filter((l) => !l.baixa && !l.cancelado && !precisaAprovacao(db, l));
   const totalSel = selecionados.reduce((a, l) => a + l.valor, 0);
   const todosMarcados = lista.length > 0 && lista.every((l) => selecao.has(l.id));
   const totalLista = lista.reduce((a, l) => a + (l.baixa?.valorPago ?? l.valor), 0);
@@ -272,6 +296,7 @@ function ContasTipo({ tipo }: { tipo: TipoLancamento }) {
             { valor: '30d', rotulo: '30 dias', contagem: contagens['30d'] },
             { valor: 'mes', rotulo: 'Este mês', contagem: contagens.mes },
             { valor: 'abertos', rotulo: 'Tudo em aberto', contagem: contagens.abertos },
+            ...(pagar && (contagens.aprovar > 0 || periodo === 'aprovar') ? [{ valor: 'aprovar' as Periodo, rotulo: 'Para aprovar', contagem: contagens.aprovar }] : []),
             { valor: 'quitados', rotulo: pagar ? 'Pagas' : 'Recebidas', contagem: contagens.quitados },
             { valor: 'todos', rotulo: 'Todas' },
           ]}
@@ -297,7 +322,7 @@ function ContasTipo({ tipo }: { tipo: TipoLancamento }) {
       {lista.length === 0 ? (
         <Vazio
           icone={pagar ? 'pagar' : 'receber'}
-          titulo={periodo === 'vencidos' ? 'Nada vencido. Bom sinal.' : 'Nenhum título por aqui'}
+          titulo={periodo === 'vencidos' ? 'Nada vencido. Bom sinal.' : periodo === 'aprovar' ? 'Nada esperando aprovação' : 'Nenhum título por aqui'}
           texto={busca ? `Nada encontrado para “${busca}”.` : 'Mude o período ou lance uma conta nova.'}
           acao={
             pode('lancar') ? (
@@ -376,6 +401,8 @@ function ContasTipo({ tipo }: { tipo: TipoLancamento }) {
                     </span>
                     <span role="cell" className="livro__status">
                       <Carimbo status={st} tipo={tipo} />
+                      {precisaAprovacao(db, l) && <CarimboTexto variante="hoje">Aprovar</CarimboTexto>}
+                      {paraConferir.has(l.id) && <CarimboTexto variante="vencido">Conferir</CarimboTexto>}
                     </span>
                     <span role="cell" className="livro__valor num">
                       {moeda(l.baixa?.valorPago ?? l.valor)}
@@ -403,9 +430,26 @@ function ContasTipo({ tipo }: { tipo: TipoLancamento }) {
           <Botao variante="fantasma" tam="p" onClick={() => setSelecao(new Set())}>
             Limpar
           </Botao>
+          {pode('aprovar') && esperandoAprovacao.length > 0 && (
+            <Botao
+              tam="p"
+              icone="check"
+              onClick={() => {
+                try {
+                  const n = aprovarPagamentos(esperandoAprovacao.map((l) => l.id), usuario.id);
+                  avisar(`${plural(n, 'pagamento aprovado', 'pagamentos aprovados')}.`);
+                } catch (e) {
+                  erro(e);
+                }
+              }}
+            >
+              Aprovar {esperandoAprovacao.length}
+            </Botao>
+          )}
+          {!pode('aprovar') && esperandoAprovacao.length > 0 && <span className="muted barra-lote__aviso">{plural(esperandoAprovacao.length, 'espera', 'esperam')} aprovação</span>}
           {pode('baixar') && (
             <Botao variante="primario" tam="p" icone="carimbo" disabled={baixaveis.length === 0} onClick={() => acoes.darBaixa(baixaveis.map((l) => l.id), () => setSelecao(new Set()))}>
-              {pagar ? 'Pagar' : 'Receber'} {baixaveis.length > 0 && baixaveis.length !== selecao.size ? `${baixaveis.length} em aberto` : 'selecionados'}
+              {pagar ? 'Pagar' : 'Receber'} {baixaveis.length > 0 && baixaveis.length !== selecao.size ? `${baixaveis.length} de ${selecao.size}` : 'selecionados'}
             </Botao>
           )}
         </div>

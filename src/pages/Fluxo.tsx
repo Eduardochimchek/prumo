@@ -7,6 +7,7 @@ import { fluxoMensal, projecaoDiaria } from '../data/selectors';
 import { GraficoProjecao } from '../components/charts/GraficoProjecao';
 import { GraficoFluxoMensal } from '../components/charts/GraficoFluxoMensal';
 import { Painel } from '../components/Painel';
+import { Simulador, cenarioDe, type Ajuste } from '../components/Simulador';
 import { Botao, Segmentado } from '../components/ui';
 
 export function Fluxo() {
@@ -14,7 +15,10 @@ export function Fluxo() {
   const ref = hoje();
   const [horizonte, setHorizonte] = useState<'30' | '60' | '90'>('60');
   const [verDias, setVerDias] = useState(false);
+  const [simulando, setSimulando] = useState(false);
+  const [ajustes, setAjustes] = useState<Ajuste[]>([]);
   const proj = useMemo(() => projecaoDiaria(db, Number(horizonte), ref), [db, horizonte, ref]);
+  const simulado = useMemo(() => (ajustes.length ? projecaoDiaria(db, Number(horizonte), ref, cenarioDe(ajustes)) : null), [db, horizonte, ref, ajustes]);
   const meses = useMemo(() => fluxoMensal(db, 6, 2, ref), [db, ref]);
   const ultimo = proj.pontos[proj.pontos.length - 1];
   const diasComMovimento = proj.pontos.filter((p) => p.entradas || p.saidas);
@@ -89,6 +93,68 @@ export function Fluxo() {
         </p>
       )}
 
+      <section className="simulacao" aria-label="Simulação">
+        <div className="secao-titulo">
+          <h2>E se…?</h2>
+          {simulando && ajustes.length > 0 && (
+            <Botao variante="fantasma" tam="p" icone="desfazer" onClick={() => setAjustes([])}>
+              Limpar simulação
+            </Botao>
+          )}
+        </div>
+        {!simulando ? (
+          <div className="simulacao__convite">
+            <span>Adiar um pagamento, um cliente atrasar, uma compra grande, receber menos: veja o que acontece com o caixa antes de decidir.</span>
+            <Botao icone="simular" onClick={() => setSimulando(true)}>
+              Simular um cenário
+            </Botao>
+          </div>
+        ) : (
+          <>
+            <Simulador db={db} ref={ref} horizonte={Number(horizonte)} ajustes={ajustes} aoMudar={setAjustes} />
+            {simulado ? (
+              <Painel
+                rotulo="Resultado da simulação"
+                className="simulacao__resultado"
+                itens={[
+                  {
+                    chave: 'menor',
+                    rotulo: 'Ponto mais baixo',
+                    valor: moeda(simulado.menor.saldo),
+                    tom: simulado.menor.saldo < 0 ? 'critico' : simulado.menor.saldo < proj.menor.saldo ? 'atencao' : 'neutro',
+                    nota: `antes: ${moeda(proj.menor.saldo)} · em ${diaMes(simulado.menor.data)}`,
+                  },
+                  {
+                    chave: 'fim',
+                    rotulo: `Saldo em ${dataBR(ultimo.data).slice(0, 5)}`,
+                    valor: moeda(simulado.pontos[simulado.pontos.length - 1].saldo),
+                    tom: simulado.pontos[simulado.pontos.length - 1].saldo < 0 ? 'critico' : 'neutro',
+                    nota: `antes: ${moeda(ultimo.saldo)}`,
+                  },
+                  {
+                    chave: 'dif',
+                    rotulo: 'Diferença no fim',
+                    valor: moeda(simulado.pontos[simulado.pontos.length - 1].saldo - ultimo.saldo, { sinal: true }),
+                    tom:
+                      simulado.pontos[simulado.pontos.length - 1].saldo - ultimo.saldo > 0
+                        ? 'entrada'
+                        : simulado.pontos[simulado.pontos.length - 1].saldo - ultimo.saldo < 0
+                          ? 'saida'
+                          : 'neutro',
+                    zerado: simulado.pontos[simulado.pontos.length - 1].saldo === ultimo.saldo,
+                    nota: simulado.menor.saldo < 0 ? `fica negativo em ${diaMes(simulado.menor.data)}` : 'o caixa não fica negativo',
+                  },
+                ]}
+              />
+            ) : (
+              <p className="muted" style={{ fontSize: 13 }}>
+                Adicione uma ou mais mudanças. Nada aqui é gravado: é só para planejar.
+              </p>
+            )}
+          </>
+        )}
+      </section>
+
       <section>
         <div className="secao-titulo">
           <h2>Saldo previsto, dia a dia</h2>
@@ -105,7 +171,17 @@ export function Fluxo() {
             />
           </div>
         </div>
-        <GraficoProjecao pontos={proj.pontos} menor={proj.menor} />
+        {simulado && (
+          <div className="legenda" style={{ marginBottom: 6 }}>
+            <span>
+              <i className="linha" style={{ background: 'var(--tinta)' }} /> Com a simulação
+            </span>
+            <span>
+              <i className="linha linha--tracejada" /> Sem a simulação
+            </span>
+          </div>
+        )}
+        <GraficoProjecao pontos={(simulado ?? proj).pontos} menor={(simulado ?? proj).menor} comparar={simulado ? proj.pontos : undefined} />
         <p className="muted" style={{ fontSize: 13, marginTop: 8 }}>
           A projeção considera os títulos em aberto (contas vencidas entram no dia de hoje). Vendas que ainda não foram lançadas não aparecem.
         </p>

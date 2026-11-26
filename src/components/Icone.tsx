@@ -63,6 +63,12 @@ const P: Record<string, string> = {
   raio: 'M13 3 5.5 13.5H12L11 21l7.5-10.5H12z',
   vinculo: 'M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1 1 M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1-1',
   imprimir: 'M7 9V3.5h10V9 M7 17H4.5V9h15v8H17 M7 14h10v6.5H7z',
+  // balão de conversa (cobrar pelo WhatsApp, sem logotipo de marca)
+  conversa: 'M5 19.5l1.3-3.7A7.5 7.5 0 1 1 9.6 18.6z M9 10.5h6 M9 13.5h4',
+  // planilha (importar contas)
+  planilha: 'M4.5 4.5h15v15h-15z M4.5 9.5h15 M4.5 14.5h15 M10 4.5v15',
+  // simulação (e se…?)
+  simular: 'M4 18.5c2.5-1 3.5-4 5-7.5s3-5.5 5.5-5.5 3.5 2 5.5 2 M4 13.5h3 M17 17.5h3 M18.5 16v3',
 };
 
 export type NomeIcone = keyof typeof P;
