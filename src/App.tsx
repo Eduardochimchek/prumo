@@ -13,7 +13,7 @@ import { VendaDetalhe } from './pages/VendaDetalhe';
 import { Produtos } from './pages/Produtos';
 import { Fluxo } from './pages/Fluxo';
 import { Contatos } from './pages/Contatos';
-import { Relatorios } from './pages/Relatorios';
+import { Relatorios } from './pages/relatorios/Indice';
 import { Usuarios } from './pages/Usuarios';
 import { Configuracoes } from './pages/Configuracoes';
 import { Vazio } from './components/ui';
@@ -29,7 +29,7 @@ function NaoEncontrado() {
       texto="O endereço não existe (ou mudou de lugar)."
       acao={
         <Link to="/" className="btn btn--secundario">
-          Voltar para Hoje
+          Voltar para o início
         </Link>
       }
     />
@@ -58,6 +58,7 @@ function Rotas() {
           <Route path="fluxo" element={<Fluxo />} />
           <Route path="contatos" element={<Contatos />} />
           <Route path="relatorios" element={<Relatorios />} />
+          <Route path="relatorios/:id" element={<Relatorios />} />
           <Route path="usuarios" element={<Usuarios />} />
           <Route path="configuracoes" element={<Configuracoes />} />
           <Route path="privacidade" element={<Privacidade />} />

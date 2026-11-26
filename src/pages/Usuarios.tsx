@@ -6,11 +6,11 @@ import { mascaraTelefone } from '../lib/br';
 import { gerarSenha } from '../lib/util';
 import { useDb } from '../data/store';
 import { excluirUsuario, salvarUsuario } from '../data/actions';
-import type { Papel, Usuario } from '../data/types';
+import type { Modulo, Papel, Usuario } from '../data/types';
 import { DESCRICAO_PAPEL, NOME_PAPEL, useAuth, useUsuario } from '../auth/auth';
+import { DESCRICAO_MODULO, MODULOS, modulosDo, NOME_MODULO } from '../auth/modulos';
 import { useAvisos } from '../components/Avisos';
 import { Camada } from '../components/Camada';
-import { Icone } from '../components/Icone';
 import { Avatar, Botao, Caixa, Campo, Entrada, EntradaSenha } from '../components/ui';
 import { MedidorSenha } from '../components/MedidorSenha';
 
@@ -34,13 +34,15 @@ function FormUsuario({ editando, aoFechar }: { editando?: Usuario; aoFechar: () 
   const [loginTocado, setLoginTocado] = useState(!!editando);
   const [cargo, setCargo] = useState(editando?.cargo ?? '');
   const [telefone, setTelefone] = useState(editando?.telefone ?? '');
-  const [papel, setPapel] = useState<Papel>(editando?.papel ?? 'financeiro');
+  const [papel, setPapel] = useState<Papel>(editando?.papel ?? 'equipe');
+  const [modulos, setModulos] = useState<Modulo[]>(editando?.modulos ?? ['financeiro']);
+  const alternarModulo = (m: Modulo) => setModulos((atual) => (atual.includes(m) ? atual.filter((x) => x !== m) : [...atual, m]));
   const [ativo, setAtivo] = useState(editando?.ativo ?? true);
   const [senha, setSenha] = useState(editando ? '' : gerarSenha());
 
   const salvar = () => {
     try {
-      salvarUsuario({ id: editando?.id, nome, email, login, cargo: cargo || undefined, telefone: telefone || undefined, papel, ativo, senha: senha || undefined }, eu.id);
+      salvarUsuario({ id: editando?.id, nome, email, login, cargo: cargo || undefined, telefone: telefone || undefined, papel, modulos, ativo, senha: senha || undefined }, eu.id);
       avisar(
         editando
           ? senha
@@ -116,7 +118,7 @@ function FormUsuario({ editando, aoFechar }: { editando?: Usuario; aoFechar: () 
 
         <fieldset className="papeis">
           <legend className="campo__rotulo">Nível de acesso</legend>
-          {(['admin', 'financeiro', 'leitura'] as Papel[]).map((p) => (
+          {(['admin', 'equipe', 'leitura'] as Papel[]).map((p) => (
             <label key={p} className={`papel${papel === p ? ' papel--ativo' : ''}`}>
               <input type="radio" name="papel" value={p} checked={papel === p} onChange={() => setPapel(p)} />
               <span>
@@ -126,6 +128,21 @@ function FormUsuario({ editando, aoFechar }: { editando?: Usuario; aoFechar: () 
             </label>
           ))}
         </fieldset>
+
+        {papel !== 'admin' && (
+          <fieldset className="papeis">
+            <legend className="campo__rotulo">Módulos que {nome.trim() ? nome.trim().split(' ')[0] : 'a pessoa'} enxerga</legend>
+            {MODULOS.map((m) => (
+              <label key={m} className={`papel${modulos.includes(m) ? ' papel--ativo' : ''}`}>
+                <input type="checkbox" name="modulos" value={m} checked={modulos.includes(m)} onChange={() => alternarModulo(m)} />
+                <span>
+                  <strong>{NOME_MODULO[m]}</strong>
+                  <span>{DESCRICAO_MODULO[m]}</span>
+                </span>
+              </label>
+            ))}
+          </fieldset>
+        )}
 
         <Campo
           rotulo={editando ? 'Redefinir senha (deixe em branco para manter)' : 'Senha provisória'}
@@ -214,7 +231,10 @@ export function Usuarios() {
                   </td>
                   <td className="mono">{u.login}</td>
                   <td>
-                    <span className={`carimbo ${u.papel === 'admin' ? 'carimbo--latao' : u.papel === 'financeiro' ? 'carimbo--info' : 'carimbo--aberto'}`}>{NOME_PAPEL[u.papel]}</span>
+                    <span className={`carimbo ${u.papel === 'admin' ? 'carimbo--latao' : u.papel === 'equipe' ? 'carimbo--info' : 'carimbo--aberto'}`}>{NOME_PAPEL[u.papel]}</span>
+                    <div className="muted" style={{ fontSize: 12.5, marginTop: 4 }}>
+                      {u.papel === 'admin' ? 'Todos os módulos' : modulosDo(u).map((m) => NOME_MODULO[m]).join(', ') || 'Nenhum módulo'}
+                    </div>
                   </td>
                   <td>{u.ativo ? <span className="carimbo carimbo--pago">Ativo</span> : <span className="carimbo carimbo--cancelado">Inativo</span>}</td>
                   <td className="num apertada">
@@ -255,41 +275,40 @@ export function Usuarios() {
 
       <section style={{ marginTop: 36 }}>
         <div className="secao-titulo">
-          <h2>O que cada acesso permite</h2>
+          <h2>O que cada módulo abre</h2>
         </div>
+        <p className="muted" style={{ fontSize: 14, margin: '0 0 12px', maxWidth: 760 }}>
+          O Administrador vê todos os módulos e ainda cuida de usuários, configurações e aprovação de pagamentos. Equipe e Consulta veem só os módulos marcados.
+        </p>
         <div className="tabela-rolagem">
-        <table className="razao papeis-tabela">
-          <thead>
-            <tr>
-              <th>Ação</th>
-              <th className="cen">Administrador</th>
-              <th className="cen">Financeiro</th>
-              <th className="cen">Consulta</th>
-            </tr>
-          </thead>
-          <tbody>
-            {(
-              [
-                ['Ver painel, contas, notas, fluxo e relatórios', true, true, true],
-                ['Exportar planilhas para o contador', true, true, true],
-                ['Lançar contas e dar baixa', true, true, false],
-                ['Importar XML e manifestar notas', true, true, false],
-                ['Cadastrar clientes e fornecedores', true, true, false],
-                ['Gerenciar usuários e acessos', true, false, false],
-                ['Dados da empresa, contas bancárias, backup', true, false, false],
-              ] as const
-            ).map(([acao, a, f, l]) => (
-              <tr key={acao}>
-                <td>{acao}</td>
-                {[a, f, l].map((ok, i) => (
-                  <td key={i} className="cen">
-                    {ok ? <Icone nome="check" tam={17} className="entrada-txt" titulo="Permitido" /> : <span className="muted" aria-label="Não permitido">-</span>}
-                  </td>
-                ))}
+          <table className="razao papeis-tabela">
+            <thead>
+              <tr>
+                <th>Módulo</th>
+                <th>Telas</th>
+                <th>Equipe pode</th>
+                <th>Consulta pode</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {(
+                [
+                  ['comercial', 'Vendas, produtos, clientes e relatório de vendas', 'Fazer orçamento, marcar aprovação do cliente, cadastrar produtos e clientes'],
+                  ['faturamento', 'Pedidos a faturar, notas fiscais e relatório de notas', 'Emitir a nota do pedido, importar XML, manifestar na SEFAZ'],
+                  ['financeiro', 'Painel do dia, a pagar, a receber, fluxo de caixa e relatórios gerenciais', 'Lançar contas, dar baixa, cobrar clientes, importar planilha'],
+                ] as const
+              ).map(([m, telas, faz]) => (
+                <tr key={m}>
+                  <td>
+                    <strong>{NOME_MODULO[m]}</strong>
+                  </td>
+                  <td>{telas}</td>
+                  <td>{faz}</td>
+                  <td className="muted">Ver e exportar</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
         </div>
       </section>
 

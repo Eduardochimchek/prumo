@@ -139,13 +139,13 @@ export function ProvedorAcoes({ children }: { children: ReactNode }) {
 
   const comandos: Comando[] = useMemo(() => {
     const c: Comando[] = [];
+    if (pode('vender')) c.push({ id: 'novo-orcamento', titulo: 'Novo orçamento', icone: 'nota', grupo: 'Ações', palavras: 'venda pedido cliente faturar nota', executar: () => api.novoOrcamento() });
     if (pode('lancar')) {
-      c.push({ id: 'novo-orcamento', titulo: 'Novo orçamento', icone: 'nota', grupo: 'Ações', palavras: 'venda pedido cliente faturar nota', executar: () => api.novoOrcamento() });
       c.push({ id: 'novo-pagar', titulo: 'Nova conta a pagar', icone: 'pagar', grupo: 'Ações', palavras: 'lancar despesa boleto', executar: () => api.novoLancamento({ tipo: 'pagar' }) });
       c.push({ id: 'novo-receber', titulo: 'Nova conta a receber', icone: 'receber', grupo: 'Ações', palavras: 'lancar receita venda', executar: () => api.novoLancamento({ tipo: 'receber' }) });
     }
     if (pode('importar')) c.push({ id: 'importar', titulo: 'Importar XML de nota fiscal', icone: 'enviar', grupo: 'Ações', palavras: 'nfe xml', executar: () => api.importarNotas() });
-    if (pode('importar')) c.push({ id: 'importar-planilha', titulo: 'Importar contas de uma planilha', icone: 'planilha', grupo: 'Ações', palavras: 'excel csv planilha importar contas', executar: () => api.importarPlanilha() });
+    if (pode('planilha')) c.push({ id: 'importar-planilha', titulo: 'Importar contas de uma planilha', icone: 'planilha', grupo: 'Ações', palavras: 'excel csv planilha importar contas', executar: () => api.importarPlanilha() });
     if (pode('contatos')) c.push({ id: 'novo-contato', titulo: 'Cadastrar cliente ou fornecedor', icone: 'contatos', grupo: 'Ações', palavras: 'cnpj contato', executar: () => api.novoContato() });
     return c;
   }, [api, pode]);

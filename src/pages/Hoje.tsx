@@ -11,6 +11,7 @@ import { agenda, briefing, emAberto, fluxoMensal, indices, nomeContato, paraCobr
 import { conferirTitulo } from '../data/conferencia';
 import type { Lancamento } from '../data/types';
 import { useAuth, useUsuario } from '../auth/auth';
+import { podeAbrir } from '../auth/modulos';
 import { useAcoes } from '../components/Acoes';
 import { Agenda } from '../components/charts/Agenda';
 import { GraficoFluxoMensal } from '../components/charts/GraficoFluxoMensal';
@@ -141,6 +142,9 @@ export function Hoje() {
   const db = useDb();
   const usuario = useUsuario();
   const { pode } = useAuth();
+  // o painel é do Financeiro; vendas e notas só aparecem para quem também tem esses módulos
+  const veVendas = podeAbrir(usuario, '/vendas');
+  const veNotas = podeAbrir(usuario, '/notas');
   const acoes = useAcoes();
   const navegar = useNavigate();
   const ref = hoje();
@@ -234,7 +238,7 @@ export function Hoje() {
       valor: moeda(vm.faturado),
       tom: 'entrada',
       zerado: !vm.faturado,
-      para: '/vendas',
+      para: veVendas ? '/vendas' : undefined,
       nota: `${plural(vm.notas.length, 'nota', 'notas')}${vm.pedidos.qtd ? ` · ${vm.pedidos.qtd} sem nota` : ''}`,
     },
   ];
@@ -297,7 +301,7 @@ export function Hoje() {
       <LinhaTitulo key={l.id} l={l} podeBaixar={pode('baixar')} aoAbrir={() => acoes.verLancamento(l.id)} aoBaixar={() => acoes.darBaixa([l.id])} />,
     ),
   );
-  b.notasSemTitulo.slice(0, 2).forEach((n) =>
+  (veNotas ? b.notasSemTitulo.slice(0, 2) : []).forEach((n) =>
     pendencias.push(
       <li key={n.id} className="titulo-linha">
         <button type="button" className="titulo-linha__principal" onClick={() => navegar(`/notas/${n.id}`)}>
@@ -320,7 +324,7 @@ export function Hoje() {
       </li>,
     ),
   );
-  if (b.sefazPendentes.length) {
+  if (veNotas && b.sefazPendentes.length) {
     pendencias.push(
       <li key="sefaz" className="titulo-linha">
         <button type="button" className="titulo-linha__principal" onClick={() => navegar('/notas?aba=sefaz')}>
@@ -349,9 +353,9 @@ export function Hoje() {
       {db.demo && (
         <PrimeirosPassos
           usuarioId={usuario.id}
-          podeLancar={pode('lancar')}
+          podeLancar={pode('vender')}
           aoOrcar={() => acoes.novoOrcamento()}
-          pedidoId={vm.pedidos.lista[0]?.id}
+          pedidoId={veVendas ? vm.pedidos.lista[0]?.id : undefined}
         />
       )}
       <section className="hoje__abertura surgir" aria-label="Resumo do dia">
@@ -420,6 +424,7 @@ export function Hoje() {
         </div>
       </section>
 
+      {veVendas && (
       <section className="hoje__vendas surgir-4" aria-label="Vendas do mês">
         <div className="secao-titulo">
           <h2>Vendas de {mesLongo(vm.mes).split(' de ')[0]}</h2>
@@ -465,7 +470,7 @@ export function Hoje() {
               <ul className="lista-titulos">
                 {vm.notas.slice(0, 4).map((n) => (
                   <li key={n.id} className="titulo-linha">
-                    <button type="button" className="titulo-linha__principal" onClick={() => navegar(`/notas/${n.id}`)}>
+                    <button type="button" className="titulo-linha__principal" onClick={() => veNotas && navegar(`/notas/${n.id}`)}>
                       <span className="titulo-linha__sentido titulo-linha__sentido--receber">
                         <Icone nome="nota" tam={15} />
                       </span>
@@ -487,6 +492,7 @@ export function Hoje() {
           </div>
         </div>
       </section>
+      )}
 
       <div className="hoje__colunas surgir-4">
         <section>
@@ -599,7 +605,7 @@ export function Hoje() {
             </span>
           </div>
           <BarrasCategoria linhas={categorias} tipo="pagar" limite={6} />
-          <Link to="/relatorios" className="hoje__saldo-link" style={{ marginTop: 14 }}>
+          <Link to="/relatorios/gerencial" className="hoje__saldo-link" style={{ marginTop: 14 }}>
             Ver DRE gerencial <Icone nome="avancar" tam={15} />
           </Link>
         </section>

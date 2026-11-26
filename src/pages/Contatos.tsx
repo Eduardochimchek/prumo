@@ -8,6 +8,7 @@ import { emAberto, statusDe } from '../data/selectors';
 import { anonimizarContato, excluirContato } from '../data/actions';
 import type { Contato, TipoContato } from '../data/types';
 import { useAuth, useUsuario } from '../auth/auth';
+import { podeAbrir } from '../auth/modulos';
 import { useAcoes } from '../components/Acoes';
 import { useAvisos } from '../components/Avisos';
 import { Camada } from '../components/Camada';
@@ -20,6 +21,8 @@ function FichaContato({ contato, aoFechar }: { contato: Contato | null; aoFechar
   const db = useDb();
   const usuario = useUsuario();
   const { pode } = useAuth();
+  // contas do contato são do Financeiro: o vendedor vê só o aviso de atraso
+  const veFinanceiro = podeAbrir(usuario, '/contas');
   const acoes = useAcoes();
   const { avisar, erro } = useAvisos();
   const titulos = useMemo(
@@ -126,6 +129,7 @@ function FichaContato({ contato, aoFechar }: { contato: Contato | null; aoFechar
             <dd className="num">{dataBR(contato.criadoEm.slice(0, 10))}</dd>
           </dl>
 
+          {veFinanceiro && (
           <div className="ficha__numeros">
             {abertoReceber > 0 && (
               <div>
@@ -148,6 +152,7 @@ function FichaContato({ contato, aoFechar }: { contato: Contato | null; aoFechar
               <strong>{notas.length}</strong>
             </div>
           </div>
+          )}
           {vencidos.length > 0 && (
             <div className="aviso-caixa aviso-caixa--critico" style={{ marginTop: 14 }}>
               <Icone nome="alerta" />
@@ -157,6 +162,8 @@ function FichaContato({ contato, aoFechar }: { contato: Contato | null; aoFechar
             </div>
           )}
 
+          {veFinanceiro && (
+          <>
           <h3 className="detalhe__h3" style={{ marginTop: 24 }}>
             Últimos lançamentos
           </h3>
@@ -183,6 +190,8 @@ function FichaContato({ contato, aoFechar }: { contato: Contato | null; aoFechar
               ))}
             </ul>
           )}
+          </>
+          )}
           {contato.observacoes && (
             <>
               <h3 className="detalhe__h3" style={{ marginTop: 24 }}>
@@ -199,10 +208,13 @@ function FichaContato({ contato, aoFechar }: { contato: Contato | null; aoFechar
 
 export function Contatos() {
   const db = useDb();
-  const { pode } = useAuth();
+  const usuario = useUsuario();
+  const { pode, modulos } = useAuth();
+  const veFinanceiro = podeAbrir(usuario, '/contas');
   const acoes = useAcoes();
   const [params, setParams] = useSearchParams();
-  const [filtro, setFiltro] = useState<'todos' | 'cliente' | 'fornecedor'>('todos');
+  // quem é só do Comercial começa vendo os clientes
+  const [filtro, setFiltro] = useState<'todos' | 'cliente' | 'fornecedor'>(modulos.length === 1 && modulos[0] === 'comercial' ? 'cliente' : 'todos');
   const [busca, setBusca] = useState('');
   const [abertoId, setAbertoId] = useState<string | null>(null);
   const ref = hoje();
@@ -300,8 +312,8 @@ export function Contatos() {
                     </span>
                   </span>
                   <span className="contato-cartao__saldo">
-                    {s?.receber ? <span className="num">+{moeda(s.receber)}</span> : null}
-                    {s?.pagar ? <span className="num">−{moeda(s.pagar)}</span> : null}
+                    {veFinanceiro && s?.receber ? <span className="num">+{moeda(s.receber)}</span> : null}
+                    {veFinanceiro && s?.pagar ? <span className="num">−{moeda(s.pagar)}</span> : null}
                     {s?.vencido ? <span className="carimbo carimbo--vencido">Vencido</span> : null}
                   </span>
                 </button>

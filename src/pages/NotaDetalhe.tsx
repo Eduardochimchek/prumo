@@ -11,6 +11,7 @@ import { useDb } from '../data/store';
 import { indices, statusDe } from '../data/selectors';
 import { excluirNota, gerarTitulosDeNota } from '../data/actions';
 import { useAuth, useUsuario } from '../auth/auth';
+import { podeAbrir } from '../auth/modulos';
 import { useAcoes } from '../components/Acoes';
 import { useAvisos } from '../components/Avisos';
 import { Icone } from '../components/Icone';
@@ -80,7 +81,7 @@ export function NotaDetalhe() {
             <span className="etiqueta etiqueta--borda">
               {nota.origem === 'sefaz' ? 'Recebida da SEFAZ' : nota.origem === 'xml' ? 'Importada por XML' : nota.origem === 'emitida' ? 'Emitida pelo Prumo' : 'Lançada à mão'}
             </span>
-            {venda && (
+            {venda && podeAbrir(usuario, '/vendas') && (
               <Link to={`/vendas/${venda.id}`} className="link" style={{ fontSize: 13 }}>
                 Pedido nº {venda.numero}
               </Link>

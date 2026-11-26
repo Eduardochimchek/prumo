@@ -96,6 +96,7 @@ const HASHES_DEMO: Record<string, string> = {
   'ana.paula': '5bb113a605cbba4d950479db62aef01b67cbad5cf11347996ec0a3df70724ed9',
   marcos: '8d1b3dca9b040f9cee3ca8e93f7cbdd5e3d8454161ff8b9fe9bacdf2b24a7bc7',
   juliana: 'e92e6622fe66adc3258c5aac07768fca1c6bd76e9a22665fcf1f0ceab82fa867',
+  bruno: '395f42ab7cfd60dbc3f5cf15c2756942b58246d3027cd9842bded9beb0d6e67e',
 };
 
 export function criarBaseDemo(ref: ISODate = hoje()): Database {
@@ -167,13 +168,15 @@ export function criarBaseDemo(ref: ISODate = hoje()): Database {
     2,
     'reginaldo123',
   );
-  const uAna = usuario('Ana Paula Moreira', 'ana.paula', 'ana.paula@horizontemateriais.com.br', 'financeiro', 'Analista financeira', 176, 0.5, 'ana123');
+  const uAna = usuario('Ana Paula Moreira', 'ana.paula', 'ana.paula@horizontemateriais.com.br', 'equipe', 'Analista financeira', 176, 0.5, 'ana123');
+  uAna.modulos = ['faturamento', 'financeiro'];
   const uMarcos = usuario('Marcos Teixeira', 'marcos', 'marcos@limaebento.com.br', 'leitura', 'Contador · Lima & Bento', 52, 70, 'marcos123');
+  uMarcos.modulos = ['faturamento', 'financeiro'];
   const uJuliana = usuario(
     'Juliana Castro',
     'juliana',
     'juliana@horizontemateriais.com.br',
-    'financeiro',
+    'equipe',
     'Assistente administrativa',
     201,
     24 * 41,
@@ -182,8 +185,12 @@ export function criarBaseDemo(ref: ISODate = hoje()): Database {
   );
   uMarcos.criadoPor = uReginaldo.id;
   uAna.criadoPor = uReginaldo.id;
+  uJuliana.modulos = ['financeiro'];
+  const uBruno = usuario('Bruno Siqueira', 'bruno', 'bruno@horizontemateriais.com.br', 'equipe', 'Vendedor', 120, 3, 'bruno123');
+  uBruno.modulos = ['comercial'];
   uJuliana.criadoPor = uReginaldo.id;
-  const usuarios = [uAdmin, uReginaldo, uAna, uMarcos, uJuliana];
+  uBruno.criadoPor = uReginaldo.id;
+  const usuarios = [uAdmin, uReginaldo, uAna, uMarcos, uJuliana, uBruno];
 
   // ---------- Categorias ----------
   const categorias: Categoria[] = [];
@@ -756,7 +763,7 @@ export function criarBaseDemo(ref: ISODate = hoje()): Database {
     validade: addDias(ref, 6),
     observacoes: 'Entrega em duas viagens na obra da Rua Dona Laura.',
     criadoEm: momento(addDias(ref, -1), 9, 20),
-    criadoPor: uAna.id,
+    criadoPor: uBruno.id,
   });
   vendas.push({
     id: id('vnd'),
@@ -782,7 +789,7 @@ export function criarBaseDemo(ref: ISODate = hoje()): Database {
     condicao: { forma: 'boleto', parcelas: 2, primeiroEm: 28, intervalo: 28 },
     validade: addDias(ref, 4),
     criadoEm: momento(addDias(ref, -4), 14, 10),
-    criadoPor: uAna.id,
+    criadoPor: uBruno.id,
     aprovadoEm: momento(addDias(ref, -1), 17, 2),
     pedidoNumero: numeroVenda,
   });
@@ -846,7 +853,7 @@ export function criarBaseDemo(ref: ISODate = hoje()): Database {
   atividades.sort((a, b) => (b.em > a.em ? 1 : -1));
 
   return {
-    versao: 3,
+    versao: 4,
     criadoEm: new Date().toISOString(),
     demo: true,
     empresa,

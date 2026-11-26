@@ -17,6 +17,7 @@ import type { LinhaPlanilha } from '../lib/planilha';
 import { atualizar, getDb } from './store';
 import type {
   Atividade,
+  Modulo,
   Baixa,
   Categoria,
   ContaBancaria,
@@ -697,8 +698,19 @@ export interface DadosUsuario {
   cargo?: string;
   telefone?: string;
   papel: Usuario['papel'];
+  /** módulos que a pessoa enxerga (obrigatório para Equipe e Consulta; administrador vê todos) */
+  modulos?: Modulo[];
   ativo: boolean;
   senha?: string;
+}
+
+const TODOS_MODULOS: Modulo[] = ['comercial', 'faturamento', 'financeiro'];
+
+function modulosValidos(dados: DadosUsuario): Modulo[] | undefined {
+  if (dados.papel === 'admin') return undefined;
+  const escolhidos = TODOS_MODULOS.filter((m) => dados.modulos?.includes(m));
+  if (!escolhidos.length) throw new ErroNegocio('Marque pelo menos um módulo para esta pessoa.');
+  return escolhidos;
 }
 
 function novaSenha(senha: string, contexto: { login: string; nome: string; email: string }) {
@@ -722,13 +734,14 @@ export function salvarUsuario(dados: DadosUsuario, quemFaz: string): Usuario {
   if (!/^\S+@\S+\.\S+$/.test(email)) throw new ErroNegocio('E-mail inválido.');
   if (db.usuarios.some((u) => u.id !== dados.id && u.login === login)) throw new ErroNegocio('Este login já está em uso.');
   if (db.usuarios.some((u) => u.id !== dados.id && u.email === email)) throw new ErroNegocio('Este e-mail já está em uso.');
+  const modulos = modulosValidos(dados);
 
   if (dados.id) {
     const atual = db.usuarios.find((u) => u.id === dados.id);
     if (!atual) throw new ErroNegocio('Usuário não encontrado.');
     const restariaAdmin = db.usuarios.some((u) => u.id !== atual.id && u.papel === 'admin' && u.ativo) || (dados.papel === 'admin' && dados.ativo);
     if (!restariaAdmin) throw new ErroNegocio('O sistema precisa de pelo menos um administrador ativo.');
-    let atualizado: Usuario = { ...atual, nome, email, login, cargo: dados.cargo, telefone: dados.telefone, papel: dados.papel, ativo: dados.ativo };
+    let atualizado: Usuario = { ...atual, nome, email, login, cargo: dados.cargo, telefone: dados.telefone, papel: dados.papel, modulos, ativo: dados.ativo };
     // senha redefinida por outra pessoa é provisória: a pessoa troca no próximo login
     if (dados.senha) atualizado = { ...atualizado, ...novaSenha(dados.senha, { login, nome, email }), trocarSenha: atual.id !== quemFaz };
     const texto = `atualizou o usuário ${atualizado.nome}${dados.senha ? ' (senha redefinida)' : ''}`;
@@ -745,6 +758,7 @@ export function salvarUsuario(dados: DadosUsuario, quemFaz: string): Usuario {
     cargo: dados.cargo,
     telefone: dados.telefone,
     papel: dados.papel,
+    modulos,
     ativo: dados.ativo,
     ...novaSenha(dados.senha, { login, nome, email }),
     trocarSenha: true,
@@ -806,7 +820,7 @@ export function excluirMinhaConta(usuarioId: string, senha: string): void {
 export function editarMeuPerfil(usuarioId: string, dados: { nome: string; email: string; telefone?: string; cargo?: string }): void {
   const u = getDb().usuarios.find((x) => x.id === usuarioId);
   if (!u) throw new ErroNegocio('Usuário não encontrado.');
-  salvarUsuario({ id: u.id, login: u.login, papel: u.papel, ativo: u.ativo, nome: dados.nome, email: dados.email, telefone: dados.telefone, cargo: dados.cargo }, usuarioId);
+  salvarUsuario({ id: u.id, login: u.login, papel: u.papel, modulos: u.modulos, ativo: u.ativo, nome: dados.nome, email: dados.email, telefone: dados.telefone, cargo: dados.cargo }, usuarioId);
 }
 
 /** Direitos de acesso e portabilidade (art. 18, II e V): tudo o que o sistema guarda sobre a pessoa. */

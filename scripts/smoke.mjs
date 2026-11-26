@@ -390,9 +390,54 @@ try {
   });
 
   await passo('retiradas dos sócios aparecem separadas no resultado (DRE)', async () => {
-    await p.goto(BASE + '#/relatorios');
+    await p.goto(BASE + '#/relatorios/gerencial');
     await p.locator('.dre__retirada').waitFor({ timeout: 3000 });
     await p.locator('.dre__sobrou', { hasText: 'Sobrou na empresa' }).waitFor({ timeout: 3000 });
+  });
+
+  await passo('relatórios: escolhe no Financeiro e no Comercial', async () => {
+    await p.goto(BASE + '#/contas/pagar');
+    await p.locator('.secoes').getByRole('link', { name: 'Relatórios' }).click();
+    await p.waitForURL(/relatorios\?m=financeiro/, { timeout: 3000 });
+    if (await p.locator('.indice-rel__item', { hasText: 'Vendas' }).count()) throw new Error('relatório de vendas na lista do Financeiro');
+    await p.locator('.indice-rel__item', { hasText: 'Contas a receber' }).click();
+    await p.getByRole('heading', { name: 'Contas a receber' }).waitFor({ timeout: 3000 });
+    await p.goto(BASE + '#/relatorios?m=comercial');
+    await p.locator('.indice-rel__item', { hasText: 'Vendas' }).click();
+    await p.getByRole('heading', { name: 'Maiores clientes' }).waitFor({ timeout: 3000 });
+  });
+
+  await passo('abas dos módulos: Faturamento abre os pedidos e as notas', async () => {
+    await p.goto(BASE + '#/');
+    await p.locator('.modulos').getByRole('link', { name: 'Faturamento' }).click();
+    await p.waitForURL(/vendas\?aba=pedido/, { timeout: 3000 });
+    await p.locator('.secoes').getByRole('link', { name: 'Notas fiscais' }).waitFor({ timeout: 3000 });
+    // Contatos é comum: continua dentro do Faturamento
+    await p.locator('.secoes').getByRole('link', { name: 'Contatos' }).click();
+    await p.waitForURL(/contatos/, { timeout: 3000 });
+    if ((await p.locator('.modulos__item.active').innerText()).trim() !== 'Faturamento') throw new Error('saiu do módulo ao abrir Contatos');
+  });
+
+  await passo('vendedor entra e só vê o Comercial', async () => {
+    await sair();
+    await entrar('bruno', 'bruno123');
+    if (!p.url().includes('#/vendas')) throw new Error(`vendedor não começou em Vendas: ${p.url()}`);
+    if (await p.locator('.modulos').count()) throw new Error('vendedor vê as abas de módulos');
+    await p.locator('.secoes__modulo', { hasText: 'Comercial' }).waitFor({ timeout: 3000 });
+    await p.getByRole('button', { name: 'Lançar' }).click();
+    await p.getByRole('menuitem', { name: 'Orçamento' }).waitFor({ timeout: 3000 });
+    if (await p.getByRole('menuitem', { name: 'Conta a pagar' }).count()) throw new Error('vendedor pode lançar conta a pagar');
+    await p.keyboard.press('Escape');
+    await p.goto(BASE + '#/contas/pagar');
+    await p.getByText('Esta tela é de outro módulo').waitFor({ timeout: 3000 });
+    await p.goto(BASE + '#/');
+    await p.waitForURL(/#\/vendas/, { timeout: 3000 });
+    await p.keyboard.press('Control+k');
+    await p.keyboard.type('fluxo');
+    await p.waitForTimeout(200);
+    if (await p.locator('.paleta__item', { hasText: 'Fluxo de caixa' }).count()) throw new Error('busca oferece o fluxo de caixa ao vendedor');
+    await p.keyboard.press('Escape');
+    await sair();
   });
 
   if (erros.length) resultados.push(['falhou', 'erros de JavaScript na página', [...new Set(erros)].join(' | ')]);

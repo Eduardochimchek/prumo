@@ -6,7 +6,7 @@ import { useSyncExternalStore } from 'react';
 import type { Database } from './types';
 import { criarBaseDemo } from './seed';
 
-export const VERSAO_BANCO = 3;
+export const VERSAO_BANCO = 4;
 const CHAVE = 'prumo:db:v1';
 
 type Ouvinte = () => void;
@@ -42,6 +42,20 @@ export function migrar(db: Database): Database {
   if (m.versao === 1) m = { ...m, versao: 2, produtos: m.produtos ?? [], vendas: m.vendas ?? [] };
   // v2 → v3: aprovação de pagamentos, cobrança pelo WhatsApp e categorias de retirada (campos opcionais)
   if (m.versao === 2) m = { ...m, versao: 3 };
+  // v3 → v4: módulos por login. Quem era "Financeiro" vira Equipe com os módulos que já usava
+  // (nada some para ninguém); Consulta continua vendo tudo o que via.
+  if (m.versao === 3) {
+    m = {
+      ...m,
+      versao: 4,
+      usuarios: m.usuarios.map((u) => {
+        const papel = u.papel as string;
+        if (papel === 'financeiro') return { ...u, papel: 'equipe', modulos: ['comercial', 'faturamento', 'financeiro'] };
+        if (papel === 'leitura' && !u.modulos) return { ...u, modulos: ['comercial', 'faturamento', 'financeiro'] };
+        return u;
+      }),
+    };
+  }
   return m;
 }
 

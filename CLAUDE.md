@@ -48,7 +48,11 @@ npm run verificar    # typecheck + test + build + smoke (rode antes de cada comm
 - **Simulação visível**: tudo o que é de mentira na demonstração (NF-e emitida, boleto/PIX, pagamento simulado, SEFAZ) mostra o selo `.selo-simulacao`. Integração real entra atrás de `ProvedorFiscal`/`ProvedorSefaz`, sem mudar as telas.
 - Toda escrita passa por `src/data/actions.ts` (valida regra, grava com `atualizar()`, registra `Atividade`). **Componentes não alteram o banco diretamente.**
 - Leituras derivadas ficam em `src/data/selectors.ts` (puras, sem efeitos). Derive com `useMemo` a partir de `useDb()`.
-- Permissões por papel em `src/auth/auth.tsx` (`pode('lancar' | 'baixar' | 'importar' | 'contatos' | 'usuarios' | 'config' | 'aprovar')`). Toda ação nova precisa de checagem na UI **e** a regra correspondente documentada.
+- **Módulos por login** (`src/auth/modulos.ts`): Comercial, Faturamento e Financeiro. Papéis: `admin` (todos os módulos + usuários, configurações e aprovação), `equipe` (trabalha nos módulos marcados em `Usuario.modulos`) e `leitura` (só olha os módulos marcados). Uma pessoa pode ter mais de um módulo.
+- Permissões: `pode('vender' | 'faturar' | 'importar' | 'lancar' | 'baixar' | 'planilha' | 'contatos' | 'usuarios' | 'config' | 'aprovar')`, derivadas do papel e dos módulos (`PERMISSOES_DO_MODULO`). Toda ação nova precisa de checagem na UI **e** a regra correspondente documentada.
+- Toda rota nova precisa de dono em `donoDaRota` (módulo, `'inicio'` ou `'livre'`); o `AppShell` bloqueia a tela de outro módulo e a busca (Ctrl+K) esconde o que a pessoa não pode abrir. Link para tela de outro módulo: esconda com `podeAbrir(usuario, rota)`.
+- O Início (painel do dono, `Hoje.tsx`) aparece para quem tem o Financeiro; blocos de vendas e notas dentro dele só para quem tem esses módulos.
+- Relatórios: catálogo em `RELATORIOS` (`modulos.ts`), cálculos em `src/data/relatorios.ts`, telas em `src/pages/relatorios/`. `/relatorios?m=<módulo>` lista os do módulo; `/relatorios/<id>` abre um.
 - Base de demonstração (`seed.ts`) é **determinística e relativa a hoje**: use só o gerador `aleatorio(semente)`; nada de `Math.random`, `Date.now` em valores, nem `sort(() => random)` (o resultado muda entre navegadores, use `r.embaralhar`). Nomes, CNPJs e valores são fictícios.
 - Mudou o formato do banco? Incremente `VERSAO_BANCO` em `store.ts` e trate a migração (hoje a versão incompatível recria a demonstração).
 
@@ -107,9 +111,11 @@ npm run verificar    # typecheck + test + build + smoke (rode antes de cada comm
 | `src/lib/planilha.ts` | Ler planilha colada/CSV (valores e datas BR, colunas sugeridas) |
 | `src/components/Painel.tsx` | Painel de números (classe `.numeros`) |
 | `src/components/Simulador.tsx` | Simulador “E se…?” do fluxo de caixa |
+| `src/auth/modulos.ts` | Módulos, papéis, permissões, dono de cada rota, catálogo de relatórios |
+| `src/data/relatorios.ts`, `src/pages/relatorios/` | Relatórios por módulo (gerencial, a pagar/receber por prazo, vendas, notas, contador) |
 | `src/pages/Vendas.tsx`, `VendaDetalhe.tsx`, `Produtos.tsx` | Faturamento: orçamento → pedido → nota; cadastro de produtos e serviços |
 | `src/components/Acoes.tsx` | Central de diálogos globais (novo lançamento, baixa, detalhe, contato, importar, orçamento, cobrança, paleta) |
-| `src/layout/AppShell.tsx` | Cabeçalho desktop + navegação do celular |
+| `src/layout/AppShell.tsx` | Cabeçalho desktop (abas dos módulos + telas do módulo) e navegação do celular; guarda das rotas por módulo |
 | `src/pages/*` | Telas (uma por rota) |
 | `src/styles/*` | tokens → base → components → shell → pages |
 

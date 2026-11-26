@@ -11,6 +11,7 @@ import { indices, statusDe } from '../data/selectors';
 import { aprovarOrcamento, emitirNotaDoPedido, recusarOrcamento } from '../data/actions';
 import { descreverCondicao, NOME_ETAPA, totaisDaVenda, vencimentosDaCondicao } from '../data/vendas';
 import { useAuth, useUsuario } from '../auth/auth';
+import { podeAbrir } from '../auth/modulos';
 import { useAcoes } from '../components/Acoes';
 import { useAvisos } from '../components/Avisos';
 import { Camada } from '../components/Camada';
@@ -91,7 +92,7 @@ export function VendaDetalhe() {
           </p>
         </div>
         <div className="pagina-cabeca__acoes nao-imprimir">
-          {v.etapa === 'orcamento' && pode('lancar') && (
+          {v.etapa === 'orcamento' && pode('vender') && (
             <>
               <Botao icone="imprimir" onClick={() => window.print()}>
                 Imprimir
@@ -124,12 +125,12 @@ export function VendaDetalhe() {
               </Botao>
             </>
           )}
-          {v.etapa === 'pedido' && pode('lancar') && (
+          {v.etapa === 'pedido' && pode('faturar') && (
             <Botao variante="primario" icone="nota" onClick={() => setConfirmar(true)}>
               Emitir nota fiscal
             </Botao>
           )}
-          {nota && (
+          {nota && podeAbrir(usuario, '/notas') && (
             <Botao icone="nota" onClick={() => navegar(`/notas/${nota.id}`)}>
               Ver NF {nota.numero}
             </Botao>

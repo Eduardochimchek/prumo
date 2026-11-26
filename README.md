@@ -84,7 +84,9 @@ Idealizado por **Reginaldo Jeronimo**, profissional do financeiro administrativo
 **Cadastros e equipe**
 - Clientes e fornecedores com **busca do CNPJ na Receita Federal** (BrasilAPI) e do CEP.
 - Suporte ao **CNPJ alfanumérico** (novo formato emitido desde julho de 2026).
-- **Usuários com data de cadastro**, quem cadastrou, último acesso, ativo/inativo e três níveis de acesso: Administrador (inclui aprovar pagamentos), Financeiro e Consulta (ideal para o contador).
+- **Usuários com data de cadastro**, quem cadastrou, último acesso, ativo/inativo e três níveis de acesso: Administrador (todos os módulos, inclui aprovar pagamentos), Equipe e Consulta (ideal para o contador).
+- **Módulos por login**: Comercial, Faturamento e Financeiro. O vendedor entra e só vê o Comercial; o financeiro só vê o Financeiro; o dono vê tudo e troca de módulo com um clique. Uma pessoa pode ter mais de um módulo.
+- **Relatórios por módulo**: você escolhe qual tirar. Gerencial (DRE), contas a pagar e a receber por prazo e por contato, vendas (por mês, cliente, produto e vendedor), notas fiscais por mês e arquivos para o contador.
 - Empresa, contas bancárias, categorias, backup/restauração e “começar de verdade” (zera os dados de demonstração).
 
 **Segurança e LGPD**
@@ -130,8 +132,9 @@ Todas as capturas ficam em [`docs/screenshots`](docs/screenshots) e são geradas
 |---|---|---|
 | `admin` | `admin123` | Administrador (conta técnica) |
 | `reginaldo` | `reginaldo123` | Administrador |
-| `ana.paula` | `ana123` | Financeiro |
-| `marcos` | `marcos123` | Consulta (contador) |
+| `ana.paula` | `ana123` | Equipe: Faturamento e Financeiro |
+| `bruno` | `bruno123` | Equipe: só Comercial (vendedor) |
+| `marcos` | `marcos123` | Consulta: Faturamento e Financeiro (contador) |
 
 > A base de demonstração é uma loja de materiais de construção **fictícia** em Porto Alegre/RS, com 9 meses de histórico e 2 de projeção, gerada a partir da data de hoje. Nomes, CNPJs e valores são inventados.
 > Para usar de verdade: **Configurações → Dados e backup → Zerar dados**, depois cadastre empresa, contas bancárias e troque as senhas.
@@ -183,7 +186,7 @@ src/
 │   ├── selectors.ts    leituras: status, saldos, agenda, fluxo, DRE, busca
 │   └── seed.ts         base de demonstração determinística
 ├── services/       BrasilAPI (CNPJ/CEP) e camada SEFAZ (simulada)
-├── auth/           sessão e permissões por papel
+├── auth/           sessão, módulos e permissões por papel
 ├── components/     primitivas de UI, diálogos, formulários, gráficos, paleta Ctrl+K
 ├── layout/         cabeçalho (desktop) e navegação inferior (celular)
 ├── pages/          Hoje, Contas, Notas, Fluxo, Contatos, Relatórios, Usuários, Configurações

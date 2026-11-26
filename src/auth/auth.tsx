@@ -7,28 +7,11 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useState, t
 import { getDb, useDb } from '../data/store';
 import { conferirSenha, registrarAcesso, registrarEventoSeguranca } from '../data/actions';
 import { limparFalhas, registrarFalha, sessaoExpirada, tempoBloqueio } from '../lib/seguranca';
-import type { Papel, Usuario } from '../data/types';
+import type { Usuario } from '../data/types';
+import { modulosDo, permissoesDo, type Modulo, type Permissao } from './modulos';
 
-export type Permissao = 'lancar' | 'baixar' | 'importar' | 'contatos' | 'usuarios' | 'config' | 'aprovar';
-
-const PERMISSOES: Record<Papel, Permissao[]> = {
-  // 'aprovar': libera pagamentos acima do limite da empresa (a regra também é checada em actions.ts)
-  admin: ['lancar', 'baixar', 'importar', 'contatos', 'usuarios', 'config', 'aprovar'],
-  financeiro: ['lancar', 'baixar', 'importar', 'contatos'],
-  leitura: [],
-};
-
-export const NOME_PAPEL: Record<Papel, string> = {
-  admin: 'Administrador',
-  financeiro: 'Financeiro',
-  leitura: 'Consulta',
-};
-
-export const DESCRICAO_PAPEL: Record<Papel, string> = {
-  admin: 'Tudo, inclusive usuários, configurações da empresa e aprovação de pagamentos.',
-  financeiro: 'Lança contas, dá baixa, cobra clientes, importa notas e planilhas e cadastra contatos.',
-  leitura: 'Só visualiza e exporta. Ideal para o contador.',
-};
+export type { Permissao } from './modulos';
+export { NOME_PAPEL, DESCRICAO_PAPEL } from './modulos';
 
 const CHAVE_SESSAO = 'prumo:sessao';
 
@@ -83,6 +66,8 @@ interface Api {
   entrar: (login: string, senha: string, lembrar: boolean) => ResultadoEntrar;
   sair: (motivo?: string) => void;
   pode: (p: Permissao) => boolean;
+  /** módulos que a pessoa enxerga (administrador: todos) */
+  modulos: Modulo[];
   /** mensagem para mostrar na tela de login (ex.: sessão encerrada por inatividade) */
   aviso: string | null;
 }
@@ -154,10 +139,10 @@ export function ProvedorAuth({ children }: { children: ReactNode }) {
     };
   }, [sessao, sair]);
 
-  const api = useMemo<Api>(
-    () => ({ usuario, entrar, sair, aviso, pode: (p) => (usuario ? PERMISSOES[usuario.papel].includes(p) : false) }),
-    [usuario, entrar, sair, aviso],
-  );
+  const api = useMemo<Api>(() => {
+    const permissoes = usuario ? permissoesDo(usuario) : new Set<Permissao>();
+    return { usuario, entrar, sair, aviso, pode: (p) => permissoes.has(p), modulos: usuario ? modulosDo(usuario) : [] };
+  }, [usuario, entrar, sair, aviso]);
 
   return <Ctx.Provider value={api}>{children}</Ctx.Provider>;
 }

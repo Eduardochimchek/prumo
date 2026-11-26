@@ -140,7 +140,7 @@ export function Produtos() {
           </p>
         </div>
         <div className="pagina-cabeca__acoes">
-          {pode('lancar') && (
+          {pode('vender') && (
             <Botao variante="primario" icone="mais" onClick={() => setForm({})}>
               Novo item
             </Botao>
@@ -184,7 +184,7 @@ export function Produtos() {
             </thead>
             <tbody>
               {lista.map((p) => (
-                <tr key={p.id} className="clicavel" onClick={() => pode('lancar') && setForm({ id: p.id })} style={{ opacity: p.ativo ? 1 : 0.55 }}>
+                <tr key={p.id} className="clicavel" onClick={() => pode('vender') && setForm({ id: p.id })} style={{ opacity: p.ativo ? 1 : 0.55 }}>
                   <td className="mono apertada">{p.codigo}</td>
                   <td>
                     <div className="celula-principal">

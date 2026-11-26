@@ -59,8 +59,8 @@ describe('baixa', () => {
 
 describe('usuários e senhas', () => {
   it('senha nova fraca é recusada; usuário novo nasce com senha provisória', () => {
-    expect(() => salvarUsuario({ nome: 'Teste', email: 't@x.com', login: 'teste', papel: 'leitura', ativo: true, senha: '123456' }, admin().id)).toThrow();
-    const u = salvarUsuario({ nome: 'Teste Silva', email: 't@x.com', login: 'teste', papel: 'leitura', ativo: true, senha: 'Provisoria 77' }, admin().id);
+    expect(() => salvarUsuario({ nome: 'Teste', email: 't@x.com', login: 'teste', papel: 'leitura', modulos: ['financeiro'], ativo: true, senha: '123456' }, admin().id)).toThrow();
+    const u = salvarUsuario({ nome: 'Teste Silva', email: 't@x.com', login: 'teste', papel: 'leitura', modulos: ['financeiro'], ativo: true, senha: 'Provisoria 77' }, admin().id);
     expect(u.trocarSenha).toBe(true);
     expect(u.senhaIteracoes).toBe(20_000);
     expect(conferirSenha(u, 'Provisoria 77')).toBe(true);

@@ -6,7 +6,11 @@ export type ISODate = string;
 export type ISODateTime = string;
 export type Centavos = number;
 
-export type Papel = 'admin' | 'financeiro' | 'leitura';
+/** admin = todos os módulos e a administração; equipe = trabalha nos módulos marcados; leitura = só olha (contador) */
+export type Papel = 'admin' | 'equipe' | 'leitura';
+
+/** Áreas do sistema. Cada login enxerga só os módulos marcados (o administrador vê todos). */
+export type Modulo = 'comercial' | 'faturamento' | 'financeiro';
 
 export interface Usuario {
   id: ID;
@@ -16,6 +20,8 @@ export interface Usuario {
   cargo?: string;
   telefone?: string;
   papel: Papel;
+  /** módulos que a pessoa enxerga (ignorado para administrador, que vê todos) */
+  modulos?: Modulo[];
   ativo: boolean;
   senhaHash: string;
   senhaSal: string;

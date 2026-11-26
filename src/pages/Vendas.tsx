@@ -59,7 +59,7 @@ export function Vendas() {
           <h1>Vendas</h1>
         </div>
         <div className="pagina-cabeca__acoes">
-          {pode('lancar') && (
+          {pode('vender') && (
             <Botao variante="primario" icone="mais" onClick={() => acoes.novoOrcamento()}>
               Novo orçamento
             </Botao>
@@ -139,7 +139,7 @@ export function Vendas() {
           titulo={aba === 'pedido' ? 'Nenhum pedido esperando nota' : aba === 'orcamento' ? 'Nenhum orçamento em aberto' : 'Nada por aqui'}
           texto="Comece por um orçamento: quando o cliente aprovar, ele vira pedido e depois nota."
           acao={
-            pode('lancar') ? (
+            pode('vender') ? (
               <Botao icone="mais" onClick={() => acoes.novoOrcamento()}>
                 Novo orçamento
               </Botao>

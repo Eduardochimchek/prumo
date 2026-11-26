@@ -12,6 +12,7 @@ import { conferirTitulo } from '../../data/conferencia';
 import { AlertasConferencia } from '../AlertasConferencia';
 import { indices, precisaAprovacao, statusDe } from '../../data/selectors';
 import { useAuth, useUsuario } from '../../auth/auth';
+import { podeAbrir } from '../../auth/modulos';
 import { Camada } from '../Camada';
 import { Icone } from '../Icone';
 import { Botao, Carimbo, ItemMenu, MenuSuspenso } from '../ui';
@@ -252,9 +253,15 @@ export function DetalheLancamento({
           <>
             <dt>Nota fiscal</dt>
             <dd>
-              <Link to={`/notas/${nota.id}`}>
-                NF {nota.numero} · {nota.direcao === 'entrada' ? nota.emitente.nome : nota.destinatario.nome}
-              </Link>
+              {podeAbrir(usuario, '/notas') ? (
+                <Link to={`/notas/${nota.id}`}>
+                  NF {nota.numero} · {nota.direcao === 'entrada' ? nota.emitente.nome : nota.destinatario.nome}
+                </Link>
+              ) : (
+                <>
+                  NF {nota.numero} · {nota.direcao === 'entrada' ? nota.emitente.nome : nota.destinatario.nome}
+                </>
+              )}
             </dd>
           </>
         )}

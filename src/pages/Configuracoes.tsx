@@ -9,6 +9,7 @@ import { saldoConta } from '../data/selectors';
 import { definirLimiteAprovacao, definirRetirada, editarMeuPerfil, excluirCategoria, excluirMinhaConta, exportarMeusDados, salvarCategoria, salvarContaBancaria, salvarEmpresa, trocarPropriaSenha, zerarDados } from '../data/actions';
 import type { ContaBancaria, Empresa, Regime, TipoCategoria, TipoConta } from '../data/types';
 import { NOME_PAPEL, useAuth, useUsuario } from '../auth/auth';
+import { podeAbrir } from '../auth/modulos';
 import { consultarCnpj } from '../services/brasilapi';
 import { useAvisos } from '../components/Avisos';
 import { Camada } from '../components/Camada';
@@ -688,9 +689,15 @@ function AbaDados() {
             <strong>Exportar backup</strong>
             <span>Um arquivo .json com tudo: {plural(db.lancamentos.length, 'lançamento', 'lançamentos')}, {plural(db.notas.length, 'nota', 'notas')}, contatos e usuários.</span>
           </div>
-          <Botao icone="baixar" onClick={() => baixarArquivo(`prumo-backup-${hoje()}.json`, exportarBackup(), 'application/json')}>
-            Baixar backup
-          </Botao>
+          {admin ? (
+            <Botao icone="baixar" onClick={() => baixarArquivo(`prumo-backup-${hoje()}.json`, exportarBackup(), 'application/json')}>
+              Baixar backup
+            </Botao>
+          ) : (
+            <span className="muted" style={{ fontSize: 13 }}>
+              Só administradores
+            </span>
+          )}
         </li>
         {admin && (
           <li>
@@ -766,17 +773,24 @@ function AbaDados() {
 
 export function Configuracoes() {
   const { pode } = useAuth();
+  const usuario = useUsuario();
   const [params, setParams] = useSearchParams();
-  const aba = (params.get('aba') as Aba) || 'empresa';
-  const abas: [Aba, string][] = [
-    ['empresa', 'Empresa'],
-    ['contas', 'Contas bancárias'],
-    ['categorias', 'Categorias'],
-    ['sefaz', 'SEFAZ'],
-    ['perfil', 'Meu perfil'],
-    ['privacidade', 'Privacidade'],
-    ['dados', 'Dados e backup'],
-  ];
+  // contas bancárias e categorias são do Financeiro; SEFAZ é do Faturamento
+  const abas = (
+    [
+      ['empresa', 'Empresa', true],
+      ['contas', 'Contas bancárias', podeAbrir(usuario, '/contas')],
+      ['categorias', 'Categorias', podeAbrir(usuario, '/contas')],
+      ['sefaz', 'SEFAZ', podeAbrir(usuario, '/notas')],
+      ['perfil', 'Meu perfil', true],
+      ['privacidade', 'Privacidade', true],
+      ['dados', 'Dados e backup', true],
+    ] as [Aba, string, boolean][]
+  )
+    .filter(([, , ok]) => ok)
+    .map(([v, rotulo]): [Aba, string] => [v, rotulo]);
+  const pedida = params.get('aba') as Aba | null;
+  const aba: Aba = pedida && abas.some(([v]) => v === pedida) ? pedida : 'empresa';
   return (
     <div className="configuracoes">
       <header className="pagina-cabeca">

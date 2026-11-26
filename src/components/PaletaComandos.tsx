@@ -6,6 +6,7 @@ import { normalizarBusca, moeda } from '../lib/format';
 import { useDb } from '../data/store';
 import { buscar } from '../data/selectors';
 import { useAuth } from '../auth/auth';
+import { podeAbrir } from '../auth/modulos';
 import { Icone, type NomeIcone } from './Icone';
 
 export interface Comando {
@@ -22,7 +23,7 @@ export interface Comando {
 export function PaletaComandos({ aberta, aoFechar, acoes }: { aberta: boolean; aoFechar: () => void; acoes: Comando[] }) {
   const db = useDb();
   const navegar = useNavigate();
-  const { pode } = useAuth();
+  const { pode, usuario } = useAuth();
   const [termo, setTermo] = useState('');
   const [ativo, setAtivo] = useState(0);
   const ref = useRef<HTMLDialogElement>(null);
@@ -41,7 +42,7 @@ export function PaletaComandos({ aberta, aoFechar, acoes }: { aberta: boolean; a
 
   const paginas: Comando[] = useMemo(() => {
     const p: [string, string, NomeIcone, string][] = [
-      ['Hoje', '/', 'hoje', 'painel inicio resumo'],
+      ['Início', '/', 'hoje', 'painel inicio resumo hoje dono'],
       ['Contas a pagar', '/contas/pagar', 'pagar', 'despesas fornecedores boletos'],
       ['Contas a receber', '/contas/receber', 'receber', 'clientes vendas'],
       ['Vendas', '/vendas', 'venda', 'orcamento pedido faturamento faturar'],
@@ -49,19 +50,20 @@ export function PaletaComandos({ aberta, aoFechar, acoes }: { aberta: boolean; a
       ['Notas fiscais', '/notas', 'nota', 'nfe xml sefaz danfe'],
       ['Fluxo de caixa', '/fluxo', 'fluxo', 'projecao saldo'],
       ['Contatos', '/contatos', 'contatos', 'clientes fornecedores cadastro'],
-      ['Relatórios', '/relatorios', 'relatorios', 'dre resultado exportar'],
+      ['Pedidos a faturar', '/vendas?aba=pedido', 'nota', 'faturamento emitir nota pedido'],
+      ['Relatórios', '/relatorios', 'relatorios', 'dre resultado exportar gerencial vendas notas contador'],
     ];
     if (pode('usuarios')) p.push(['Usuários', '/usuarios', 'usuarios', 'acessos permissoes senha']);
     p.push(['Configurações', '/configuracoes', 'ajustes', 'empresa contas bancarias categorias backup tema sefaz']);
-    return p.map(([titulo, rota, icone, palavras]) => ({ id: `ir-${rota}`, titulo, icone, grupo: 'Ir para' as const, palavras, executar: () => navegar(rota) }));
-  }, [navegar, pode]);
+    return p.filter(([, rota]) => !usuario || podeAbrir(usuario, rota)).map(([titulo, rota, icone, palavras]) => ({ id: `ir-${rota}`, titulo, icone, grupo: 'Ir para' as const, palavras, executar: () => navegar(rota) }));
+  }, [navegar, pode, usuario]);
 
   const lista = useMemo(() => {
     const t = normalizarBusca(termo);
     const casa = (c: Comando) => !t || normalizarBusca(`${c.titulo} ${c.palavras ?? ''}`).includes(t);
     const base = [...acoes.filter(casa), ...paginas.filter(casa)];
     if (t.length >= 2) {
-      for (const r of buscar(db, termo, 6)) {
+      for (const r of buscar(db, termo, 6).filter((x) => !usuario || podeAbrir(usuario, x.rota))) {
         base.push({
           id: `${r.tipo}-${r.id}`,
           titulo: r.titulo,
@@ -74,7 +76,7 @@ export function PaletaComandos({ aberta, aoFechar, acoes }: { aberta: boolean; a
       }
     }
     return base;
-  }, [termo, acoes, paginas, db, navegar]);
+  }, [termo, acoes, paginas, db, navegar, usuario]);
 
   const executar = (c?: Comando) => {
     if (!c) return;

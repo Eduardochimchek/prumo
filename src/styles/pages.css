@@ -1348,6 +1348,121 @@
   color: var(--tinta-3);
 }
 
+/* ---------- Lista de relatórios ---------- */
+.indice-rel + .indice-rel {
+  margin-top: 30px;
+}
+.indice-rel__lista {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  border-top: 1px solid var(--regua);
+}
+.indice-rel__item {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto 18px;
+  align-items: center;
+  gap: 24px;
+  padding: 18px 6px;
+  border-bottom: 1px solid var(--regua);
+  color: var(--tinta);
+  text-decoration: none;
+}
+.indice-rel__item:hover {
+  background: var(--folha-2);
+}
+.indice-rel__item > svg {
+  color: var(--tinta-4);
+}
+.indice-rel__texto,
+.indice-rel__numero {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+}
+.indice-rel__texto strong {
+  font-family: var(--fonte-titulo);
+  font-size: 21px;
+  font-weight: 560;
+  letter-spacing: -0.01em;
+}
+.indice-rel__texto span,
+.indice-rel__numero span {
+  color: var(--tinta-3);
+  font-size: 13.5px;
+}
+.indice-rel__numero {
+  align-items: flex-end;
+  text-align: right;
+}
+.indice-rel__numero strong {
+  font-size: 20px;
+  font-weight: 600;
+  font-variant-numeric: proportional-nums;
+}
+@media (max-width: 640px) {
+  .indice-rel__item {
+    grid-template-columns: minmax(0, 1fr) 18px;
+    gap: 8px 12px;
+  }
+  .indice-rel__numero {
+    grid-row: 2;
+    align-items: flex-start;
+    text-align: left;
+  }
+  .indice-rel__item > svg {
+    grid-row: 1 / span 2;
+    grid-column: 2;
+  }
+}
+
+/* participação no total: filete + percentual */
+.parte {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 140px;
+}
+.parte__trilho {
+  flex: 1;
+  height: 6px;
+  border-radius: 3px;
+  background: var(--folha-3);
+  overflow: hidden;
+}
+.parte__barra {
+  display: block;
+  height: 100%;
+  border-radius: 3px;
+}
+.parte__barra--entrada {
+  background: var(--entrada);
+}
+.parte__barra--saida {
+  background: var(--saida);
+}
+.parte__barra--critico {
+  background: var(--critico);
+}
+.parte .num {
+  min-width: 3.5em;
+  text-align: right;
+  font-size: 13px;
+  color: var(--tinta-2);
+}
+.relatorio-duas {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 28px;
+  margin-top: 32px;
+}
+@media (max-width: 900px) {
+  .relatorio-duas {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
 /* ---------- Usuários ---------- */
 .papeis {
   display: flex;

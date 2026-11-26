@@ -20,7 +20,7 @@ Encontrou uma vulnerabilidade? **Não abra uma issue pública.** Use o botão �
 | Senha fraca | Mínimo de 8 caracteres com letras e números, sem nome/login, sem senhas comuns; medidor de força. |
 | Senha provisória esquecida | Senha criada por administrador obriga troca no primeiro acesso. |
 | Sessão aberta em computador alheio | Encerra após 30 min sem uso (ou 30 dias com “manter conectado”). |
-| Falta de controle de acesso | Três papéis (Administrador, Financeiro, Consulta) checados na interface e nas ações; testes ponta a ponta cobrem o papel Consulta. |
+| Falta de controle de acesso | Três papéis (Administrador, Equipe, Consulta) e módulos por login (Comercial, Faturamento, Financeiro): cada pessoa só abre as telas e só faz as ações dos módulos dela; o backup completo só sai para administrador. Testes unitários e ponta a ponta cobrem Consulta e o vendedor só do Comercial. Na V1 a regra roda no navegador; na V2 o servidor repete a checagem. |
 | XSS / injeção de script | React escapa todo texto; nenhum `innerHTML`/`eval`; CSP só permite script do próprio site. |
 | Clickjacking | Script impede abrir o Prumo dentro de outro site. |
 | Planilha maliciosa (CSV injection) | Células que começam com `=`, `+`, `-`, `@` são neutralizadas na exportação. |

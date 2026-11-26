@@ -45,6 +45,10 @@ const telas = [
   { nome: 'fluxo', rota: '#/fluxo' },
   { nome: 'contatos', rota: '#/contatos' },
   { nome: 'relatorios', rota: '#/relatorios' },
+  { nome: 'relatorio-gerencial', rota: '#/relatorios/gerencial' },
+  { nome: 'relatorio-vendas', rota: '#/relatorios/vendas' },
+  { nome: 'relatorio-receber', rota: '#/relatorios/a-receber' },
+  { nome: 'relatorio-notas', rota: '#/relatorios/notas' },
   { nome: 'usuarios', rota: '#/usuarios' },
   { nome: 'configuracoes', rota: '#/configuracoes' },
 ];
